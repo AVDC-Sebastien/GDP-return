@@ -41,8 +41,11 @@ class Client:
         try:
             print("Disconnection...")
             self.__isConnected = False
+            self.__sock.sendall(str("exit").encode())
             self.__sock.close()
             self.__isClientrunning = False
+            print("Disconnected")
+            exit()
         except:
             if self.__isConnected:
                 print("Disconnection failed")
