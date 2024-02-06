@@ -84,6 +84,8 @@ class Client:
         if msg == "ping":
             self.__sending_time.append(time.time())
             return "ping"
+        if msg == "ping -m":
+            print(sum(self.__sending_time)/len(self.__sending_time))
         return msg
 
     def start_sending(self):
@@ -121,9 +123,10 @@ class Client:
                 self.disconnect()
                 exit()
             case "ping":
-                print("receiving time : " + str(1000 * (time.time() - self.__sending_time[-1])) +"ms")
+                self.t = 1000 * (time.time() - self.__sending_time[-1])
+                print("receiving time : " + str(self.t) +"ms")
+                self.__sending_time[-1] = self.t
 
-    
 
 
 
