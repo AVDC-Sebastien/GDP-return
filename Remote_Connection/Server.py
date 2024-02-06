@@ -18,6 +18,7 @@ class Server:
         self.__sock.bind(self.__server_address)
         self.__isServerrunning = True
         self.__msg = "hi"
+        self.__custom_message = ""
 
         # Boolean of the client
         self.__connected_client = 0
@@ -46,13 +47,18 @@ class Server:
     
     def disconnect(self):
         try:
+            self.print_received_data = False
             print("Disconnection...")
+            self.__stop_receiving_msg = True
             self.__sock.close()
             self.__client_isConnected = False
             self.__isServerrunning = False
-
+            print("Disconnected")
+            exit()
         except:
-            if self.__client_isConnected:
+            if not self.__client_isConnected and not self.__isServerrunning:
+                return
+            elif self.__client_isConnected:
                 print("Disconnection failed")
             else:
                 print("No server connected")
@@ -62,15 +68,27 @@ class Server:
         try:
             while (not self.__needs_to_stop) and self.__isServerrunning:
                 message = self.update_msg()
-                self.__connected_client.sendall(str(message).encode())
+                if message != "Not sending any msg":
+                    self.__connected_client.sendall(str(message).encode())
         except:
-                if self.__client_isConnected:
+                if self.__needs_to_stop and not self.__isServerrunning:
+                    print("Stopped sending")
+                elif self.__client_isConnected:
                     print("Message couldn't be sent")
                 else:
                     print("There is no client connected")
 
     def update_msg(self):
-        return self.__msg
+        return self.custom_message()
+    
+    def custom_message(self):
+        if self.__custom_message  == "exit":
+            self.disconnect()
+        if self.__custom_message  == "ping":
+            self.__connected_client.sendall(str("ping").encode())
+            self.__custom_message = "ping sent"
+            print("ping sent")
+        return "Not sending any msg"
     
     def start_sending(self):
         self.t1 = threading.Thread(target = self.send_message,args=[self.__msg])
@@ -88,11 +106,11 @@ class Server:
             while (not self.__stop_receiving_msg) and self.__isServerrunning:
                 data = self.__connected_client.recv(self.__message_size).decode()
                 if self.print_received_data:
-                    print(data)
+                    print("Message received : "+str(data))
                 self.execute_message(data)
         except:
-                print("Error in receiving a message")
-    
+                if not self.__stop_receiving_msg:
+                    print("Error in receiving a message")
     
     def execute_message(self,msg):
         match msg:
@@ -103,10 +121,10 @@ class Server:
                 self.start_sending()
 
             case "exit":
-                self.__stop_receiving_msg = True
                 self.disconnect()
-                exit()
-    
+
+            case "ping":
+                self.__custom_message = "ping"
 
 
 server = Server(HOST,PORT)
