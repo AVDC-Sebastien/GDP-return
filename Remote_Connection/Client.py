@@ -1,7 +1,8 @@
 import socket
 import threading
+import time
 
-HOST, PORT = '138.250.149.163', 65000
+HOST, PORT = '138.250.149.218', 65000
 
 class Client:
     
@@ -20,6 +21,9 @@ class Client:
         self.__isConnected = False
         self.__needs_to_stop = False
         self.__stop_receiving_msg = False
+
+
+        self.__sending_time = []
         self.start()
 
 
@@ -39,15 +43,19 @@ class Client:
     
     def disconnect(self):
         try:
+            self.print_received_data = False
             print("Disconnection...")
             self.__isConnected = False
             self.__sock.sendall(str("exit").encode())
+            time.sleep(1)
             self.__sock.close()
             self.__isClientrunning = False
             print("Disconnected")
             exit()
-        except:
-            if self.__isConnected:
+        except Exception as e:
+            if self.__isConnected and not self.__isClientrunning:
+                return
+            elif self.__isConnected:
                 print("Disconnection failed")
             else:
                 print("No server connected")
@@ -59,6 +67,8 @@ class Client:
                 message = self.update_msg()
                 self.__sock.sendall(str(message).encode())
         except:
+                if not self.__isConnected and not self.__isClientrunning:
+                    return
                 if self.__isConnected:
                     print("Message couldn't be sent")
                 else:
@@ -66,6 +76,15 @@ class Client:
     
     def update_msg(self):
         return self.custom_message()
+
+    def custom_message(self):
+        msg = input("Message to send: ")
+        if msg == "exit":
+            self.disconnect()
+        if msg == "ping":
+            self.__sending_time.append(time.time())
+            return "ping"
+        return msg
 
     def start_sending(self):
         self.t1 = threading.Thread(target = self.send_message, args=[self.__msg])
@@ -82,11 +101,12 @@ class Client:
         try:
             while (not self.__stop_receiving_msg) and self.__isClientrunning:
                 data = self.__sock.recv(self.__message_size).decode()
+                self.execute_message(data)
                 if self.print_received_data:
                     print(data)
-                self.execute_message(data)
         except:
-                print("Error in receiving a message")
+                if self.__stop_receiving_msg:
+                    print("Error in receiving a message")
 #endregion
     def execute_message(self,msg):
         match msg:
@@ -100,12 +120,11 @@ class Client:
                 self.__stop_receiving_msg = True
                 self.disconnect()
                 exit()
+            case "ping":
+                print("receiving time : " + str(1000 * (time.time() - self.__sending_time[-1])) +"ms")
+
     
-    def custom_message(self):
-        msg = input("Message to send: ")
-        if msg == "exit":
-            self.disconnect()
-        return msg
+
 
 
 client = Client(HOST,PORT)
