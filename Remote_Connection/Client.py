@@ -2,7 +2,7 @@ import socket
 import threading
 import time
 
-HOST, PORT = '138.250.149.218', 65000
+HOST, PORT = '138.250.149.160', 65000
 
 class Client:
     
