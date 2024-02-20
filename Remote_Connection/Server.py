@@ -181,42 +181,47 @@ class Server:
     def Async_start_QTM(self):
         asyncio.get_event_loop().run_until_complete(self.get_QTM_data()) 
 
-    async def get_QTM_data(self):
-        """ 
-        Connects to the QTM server, initiates the measurement process.
-        """
-        try:
-            connection = await qtm.connect("127.0.0.1") # Change the ip adress to the good one
-        except Exception as ex:
-            print(f"Couldn't connect with expection: {ex}")
-            
 
+    async def get_QTM_data(self):
+        
+        # Connect to the QTM 
+        connection = await qtm.connect("138.250.154.110")
+        if connection is None:
+            return -1
+
+        # Take control of the QTM system
         async with qtm.TakeControl(connection, self.__connection_password):
             state = await connection.get_state()
             if state != qtm.QRTEvent.EventConnected:
                 await connection.new()
                 try:
                     await connection.await_event(qtm.QRTEvent.EventConnected, timeout=10)
-                except asyncio.TimeoutError as ex:
-                    print(f"Failed to start new measurement with : {ex}")
+                except asyncio.TimeoutError:
+                    return -1
                 
             # Start the measurement
             await connection.start()
             await connection.await_event(qtm.QRTEvent.EventCaptureStarted, timeout=10)
 
+            def on_packet(packet):
+                info, bodies = packet.get_6d()
+                for position, rotation in bodies:
+                    print(f"Pos: {position} ")
 
             while True:
-                try:
-                    if self.__disconnect_QTM == True:
+                try: 
+                    if not self.__disconnect_QTM:
                         break
+                    await connection.stream_frames(components=["6d"], on_packet=on_packet)
                 except:
-                    print("")
-
+                    pass
+            await connection.stream_frames_stop()
             # Stop the measurement
             await connection.stop()
             await connection.await_event(qtm.QRTEvent.EventCaptureStopped, timeout=10)
-            
         connection.disconnect()
+
+
         
 
 
