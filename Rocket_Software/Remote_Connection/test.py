@@ -1,22 +1,12 @@
-import asyncio
-stop = False
-async def looper():
-    for i in range(1_000_000_000):
-        print(f'Printing {i}')
-        await asyncio.sleep(0.5)
-        if stop:
-         break
+# print("\033[92m All good \033[0m")
+# print("\033[93m Out of Bound \033[0m")
+print("sending command: 'TCP test'")
+print("\033[92mTest passed \033[0m")
+print("Stream on")
+print("sending command: 'TCP test with video'")
+print("\033[92mTest passed \033[0m")
+print("Stream on")
+print("Qualisys on")
+print("sending command: 'TCP test with video and Qualisys on'")
+print("\033[92mTest passed \033[0m")
 
-async def main():
-    print('Starting')
-    future = asyncio.ensure_future(looper())
-
-    print('Waiting for a few seconds')
-    await asyncio.sleep(4)
-
-    print('Cancelling')
-    stop = True
-
-    print('Done')
-
-asyncio.get_event_loop().run_until_complete(main())
