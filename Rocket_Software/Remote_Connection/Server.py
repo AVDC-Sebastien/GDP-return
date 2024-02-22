@@ -34,6 +34,7 @@ class Server:
         # QTM
         self.__connection_password = "gdp-return"
         self.__disconnect_QTM = False
+        self.__qtm_IP = "138.250.154.110"
 
         self.start_server()
 
@@ -45,8 +46,8 @@ class Server:
         self.open_server()
         self.start_sending()
         self.receive_message()
+        self.start_QTM()
           
-
     def open_server(self):
         '''
         Manage the connection of the clients
@@ -170,6 +171,7 @@ class Server:
 #region Getting the data from qtm
                 
     def start_QTM(self):
+        print("Starting QTM connection")
         self.__disconnect_QTM = False
         self.qtm_thread = threading.Thread(target=self.Async_start_QTM)
         self.qtm_thread.start()
@@ -185,7 +187,7 @@ class Server:
     async def get_QTM_data(self):
         
         # Connect to the QTM 
-        connection = await qtm.connect("138.250.154.110")
+        connection = await qtm.connect(self.__qtm_IP)
         if connection is None:
             return -1
 
@@ -206,7 +208,8 @@ class Server:
             def on_packet(packet):
                 info, bodies = packet.get_6d()
                 for position, rotation in bodies:
-                    print(f"Pos: {position} ")
+                    self.position = position
+                    self.rotation = rotation
 
             while True:
                 try: 
@@ -227,8 +230,8 @@ class Server:
 
 
 #endregion
-                
-server = Server(HOST,PORT)
+if __name__ == "__main__":
+    server = Server(HOST,PORT)
 
 
 

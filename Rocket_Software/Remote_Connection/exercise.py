@@ -10,15 +10,17 @@ class send_receive_msg():
     def __init__(self,first_msg):
         self.__needs_to_stop = False
         self.__msg = first_msg
+        
 
     def sending(self,msg):
         while not self.__needs_to_stop:
             msg = self.update_msg(msg)
-            print(msg)
+            self.__msg = msg
             
 
     def receiving(self):
         msg = input("input")
+        print(self.__msg)
         if msg == "stop":
             self.__needs_to_stop = True
 
