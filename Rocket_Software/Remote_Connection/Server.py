@@ -35,6 +35,10 @@ class Server:
         self.__connection_password = "gdp-return"
         self.__disconnect_QTM = False
         self.__qtm_IP = "138.250.154.110"
+        self.__tolerance = 0.1
+        self.__qtm_position = []
+        self.__qtm_rotation = []
+        # Rocket
 
         self.start_server()
 
@@ -183,9 +187,7 @@ class Server:
     def Async_start_QTM(self):
         asyncio.get_event_loop().run_until_complete(self.get_QTM_data()) 
 
-
     async def get_QTM_data(self):
-        
         # Connect to the QTM 
         connection = await qtm.connect(self.__qtm_IP)
         if connection is None:
@@ -208,9 +210,8 @@ class Server:
             def on_packet(packet):
                 info, bodies = packet.get_6d()
                 for position, rotation in bodies:
-                    self.position = position
-                    self.rotation = rotation
-
+                    self.update_position(position,rotation)
+            print(self.check_position(self.__qtm_position,self.__tolerance))
             while True:
                 try: 
                     if not self.__disconnect_QTM:
@@ -223,6 +224,17 @@ class Server:
             await connection.stop()
             await connection.await_event(qtm.QRTEvent.EventCaptureStopped, timeout=10)
         connection.disconnect()
+    
+    def check_position(self, pos, tolerance = 0.1, x_min = 0, x_max = 100, y_min = 0, y_max = 100, z_min = 0, z_max = 100):
+        min_values = [x_min,y_min,z_min]
+        max_values = [x_max,y_max,z_max]
+        for i in range(min_values):
+            if pos[i] < (1+tolerance) * min_values[i] or pos > (1-tolerance)*max_values[i]:
+                return "Out of Bound"
+        return
+    def update_position(self,pos,rot):
+        self.__qtm_position = pos
+        self.__qtm_rotation = rot
 
 
         
