@@ -8,7 +8,7 @@ import numpy as np
 
 i2c = board.I2C()
 sensor = adafruit_bno055.BNO055_I2C(i2c)
-
+sensor.euler
 # while True:
 #     print(sensor.acceleration)
 #     print(sensor.gyro)
@@ -33,7 +33,7 @@ while True:
         magnet = magne_store_data
     
     try:
-        ahrs.update(gyro, accel ,magnet, 1 / 1000)  # 100 Hz sample rate
+        ahrs.update(gyro, accel ,magnet, 1 / 100)  # 100 Hz sample rate
         print(ahrs.quaternion.to_euler())
     except Exception as e:
         print(sensor.magnetic)

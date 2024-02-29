@@ -13,32 +13,32 @@ class Server:
         '''
         Initialize the server
         '''
-        # Create a TCP socket
+        # region Create a TCP socket
         self.__sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)     
         self.__server_address = (host, port)
         self.__message_size = new_message_size
-                
-        # Starting TCP server on {host} port {port}
+        # endregion                
+        # region Starting TCP server on {host} port {port}
         self.__sock.bind(self.__server_address)
         self.__isServerrunning = True
         self.__msg = "hi"
         self.__custom_message = ""
-
-        # Boolean of the client
+        #endregion
+        # region Boolean of the client
         self.__connected_client = 0
         self.print_received_data = True
         self.__client_isConnected = False
         self.__needs_to_stop = False
         self.__stop_receiving_msg = False
-
-        # QTM
+        #endregion
+        # region QTM
         self.__connection_password = "gdp-return"
         self.__disconnect_QTM = False
         self.__qtm_IP = "138.250.154.110"
         self.__tolerance = 0.1
         self.__qtm_position = []
         self.__qtm_rotation = []
-        # Rocket
+        #endregion
 
         self.start_server()
 
