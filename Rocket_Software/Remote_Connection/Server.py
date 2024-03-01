@@ -22,7 +22,7 @@ class Server:
         self.__sock.bind(self.__server_address)
         self.__isServerrunning = True
         self.__msg = "hi"
-        self.__custom_message = ""
+        self.__Send_message = []
         #endregion
         # region Boolean of the client
         self.__connected_client = 0
@@ -50,41 +50,44 @@ class Server:
         self.open_server()
         self.start_sending()
         self.receive_message()
-        self.start_QTM()
+        #self.start_QTM()
           
     def open_server(self):
         '''
         Manage the connection of the clients
         '''
         try:
+            print(f"Opening the local server on port: {HOST}")
             self.__sock.listen()
-            print("Server open")
+            print_with_colors("Server open","Green")
             self.__connected_client, self.__addr = self.__sock.accept()
-            print(f"client connected with {self.__addr}")
+            print(f"Client connected with ip: {self.__addr[0]} on port: {self.__addr[1]}")
             self.__client_isConnected = True
         except:
-            print("Could not connect")
+            print_with_colors("Could not connect","Warning")
     
     def disconnect(self):
         '''
         Disconnect the server
         '''
         try:
-            self.print_received_data = False
-            print("Disconnection...")
-            self.__stop_receiving_msg = True
-            self.__sock.close()
-            self.__client_isConnected = False
+            if self.__client_isConnected:
+                self.print_received_data = False
+                print("Disconnecting the clients...")
+                self.__stop_receiving_msg = True
+                self.__sock.close()
+                self.__client_isConnected = False
+                print_with_colors("Clients disconnected","Green")
             self.__isServerrunning = False
-            print("Disconnected")
+            print_with_colors("Shutting down the server now","Warning")
             exit()
         except:
             if not self.__client_isConnected and not self.__isServerrunning:
                 return
             elif self.__client_isConnected:
-                print("Disconnection failed")
+                print_with_colors("Disconnection failed","Error")
             else:
-                print("No server connected")
+                print("No client connected")
 
 #region Sending message
     def start_sending(self):
@@ -94,7 +97,7 @@ class Server:
         self.__needs_to_stop = False
         self.t1 = threading.Thread(target = self.send_message,args=[self.__msg])
         self.t1.start()
-        print("starting sending")
+        print_with_colors("Starting sending messages !","Green")
 
     def stop_sending(self):
         '''
@@ -102,7 +105,7 @@ class Server:
         '''
         self.__needs_to_stop = True
         self.t1.join()
-        print("sending stopped")
+        print("Sending stopped")
 
     def send_message(self,message):
         '''
@@ -111,7 +114,7 @@ class Server:
         try:
             while (not self.__needs_to_stop) and self.__isServerrunning:
                 message = self.update_msg()
-                if message != "Not sending any msg":
+                if message != "":
                     self.__connected_client.sendall(str(message).encode())
         except:
                 if self.__needs_to_stop and not self.__isServerrunning:
@@ -125,19 +128,22 @@ class Server:
         '''
         Update the message if it has changed
         '''
-        return self.custom_message()
-    
-    def custom_message(self):
-        '''
-        Change the message to send
-        '''
-        if self.__custom_message  == "exit":
-            self.disconnect()
-        if self.__custom_message  == "ping":
-            self.__connected_client.sendall(str("ping").encode())
-            self.__custom_message = "ping sent"
-            print("ping sent")
-        return "Not sending any msg"
+        msg = self.__Send_message.pop(0)
+        print(msg)
+        match msg:
+            case "exit":
+                self.disconnect()
+                return ""
+            case "ping":
+                print("ping sent")
+                return "ping sent"
+        return ""
+            
+
+        
+    def send_custom_message(self,txt):
+        self.__Send_message.append(txt)
+
 
 #endregion
 #region Receiveing message
@@ -170,7 +176,10 @@ class Server:
                 self.disconnect()
 
             case "ping":
-                self.__custom_message = "ping"
+                self.send_custom_message("ping")
+            
+            case "Start -QTM":
+                self.start_QTM()
 #endregion
 #region Getting the data from qtm
                 
@@ -242,6 +251,15 @@ class Server:
 
 
 #endregion
+
+def print_with_colors(txt,txt_type):
+    if txt_type == "Error":
+        print("\033[91mError: {}\033[00m" .format(txt))
+    if txt_type == "Warning":
+         print("\033[93mWarning: {}\033[00m" .format(txt))
+    if txt_type == "Green":
+        print("\033[92m{}\033[00m" .format(txt))
+
 if __name__ == "__main__":
     server = Server(HOST,PORT)
 

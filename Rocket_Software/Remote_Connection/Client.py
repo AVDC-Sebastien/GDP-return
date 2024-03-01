@@ -2,7 +2,7 @@ import socket
 import threading
 import time
 
-HOST, PORT = '138.250.149.160', 65000
+HOST, PORT = '138.250.149.121', 65000
 
 class Client:
     
@@ -29,36 +29,51 @@ class Client:
 
     def start(self):
         self.connect()
-        self.start_sending()
-        self.receive_message()
+
           
 
     def connect(self):
         try:
+            print("Trying to connect")
             self.__sock.connect(self.__server_address)
             self.__isConnected = True
-            print("Connection done!")
+            print_with_colors("Connection done!","Green")
+
+            self.start_sending()
+            self.receive_message()
         except:
-            print("Could not connect")
+            print_with_colors("Could not connect","Warning")
+            try_again = input("Want to try again ?(Y/N): ")
+            while try_again.lower() not in ("y","n"):
+                try_again = input("Try 'Y' or 'N': ")
+            if try_again.lower() == "y":
+                self.connect()
+            else:
+                self.disconnect()
     
     def disconnect(self):
         try:
-            self.print_received_data = False
-            print("Disconnection...")
-            self.__isConnected = False
-            self.__sock.sendall(str("exit").encode())
-            time.sleep(1)
-            self.__sock.close()
-            self.__isClientrunning = False
-            print("Disconnected")
-            exit()
+            if self.__isConnected:
+                self.print_received_data = False
+                print("Disconnection...")
+                self.__isConnected = False
+                self.__sock.sendall(str("exit").encode())
+                time.sleep(1)
+                self.__sock.close()
+                self.__isClientrunning = False
+                print("Disconnected")
+                exit()
+            else:
+                print("Exiting")
+                exit()
         except Exception as e:
             if self.__isConnected and not self.__isClientrunning:
                 return
             elif self.__isConnected:
                 print("Disconnection failed")
             else:
-                print("No server connected")
+                print("Error")
+                      
 
 #region Sending message
     def send_message(self,message):
@@ -75,9 +90,6 @@ class Client:
                     print("There is no server connected")
     
     def update_msg(self):
-        return self.custom_message()
-
-    def custom_message(self):
         msg = input("Message to send: ")
         if msg == "exit":
             self.disconnect()
@@ -87,6 +99,7 @@ class Client:
         if msg == "ping -m":
             print(sum(self.__sending_time)/len(self.__sending_time))
         return msg
+
 
     def start_sending(self):
         self.t1 = threading.Thread(target = self.send_message, args=[self.__msg])
@@ -128,7 +141,13 @@ class Client:
                 self.__sending_time[-1] = self.t
 
 
-
+def print_with_colors(txt,txt_type):
+    if txt_type == "Error":
+        print("\033[91mError: {}\033[00m".format(txt))
+    if txt_type == "Warning":
+         print("\033[93mWarning: {}\033[00m".format(txt))
+    if txt_type == "Green":
+        print("\033[92m{}\033[00m".format(txt))
 
 client = Client(HOST,PORT)
 
