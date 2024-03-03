@@ -136,7 +136,9 @@ class Server:
                 return ""
             case "ping":
                 print("ping sent")
-                return "ping sent"
+                self.__msg = "ping"
+            case _:
+                self.__msg = msg
         return ""
             
 
@@ -180,6 +182,8 @@ class Server:
             
             case "Start -QTM":
                 self.start_QTM()
+            case _:
+                self.send_custom_message(msg)
 #endregion
 #region Getting the data from qtm
                 

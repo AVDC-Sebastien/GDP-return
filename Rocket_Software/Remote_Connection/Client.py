@@ -2,7 +2,7 @@ import socket
 import threading
 import time
 
-HOST, PORT = '138.250.149.121', 65000
+HOST, PORT = '138.250.145.142', 65000
 
 class Client:
     
@@ -61,10 +61,10 @@ class Client:
                 time.sleep(1)
                 self.__sock.close()
                 self.__isClientrunning = False
-                print("Disconnected")
+                print_with_colors("Disconnected","Green")
                 exit()
             else:
-                print("Exiting")
+                print_with_colors("Exiting","Green")
                 exit()
         except Exception as e:
             if self.__isConnected and not self.__isClientrunning:

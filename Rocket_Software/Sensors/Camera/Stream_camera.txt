@@ -1,0 +1,5 @@
+On the camera:
+libcamera-vid -t 0 --inline --listen -o tcp://0.0.0.0:8554
+
+In VLC:
+tcp/h264:// Adress_IP :8554
