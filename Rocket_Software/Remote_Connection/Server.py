@@ -5,6 +5,7 @@ import threading
 import logging
 import os
 import json
+import time
 
 HOST, PORT = '0.0.0.0', 65000
 logging.basicConfig(filename="GDP_retrun_server.log", level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')   
@@ -57,7 +58,8 @@ class Server:
         Start the different thread and functions we need
         '''
         self.open_server()
-        self.Server_command()
+        self.Server_command_thread = threading.Thread(target=self.Server_command)
+        self.Server_command_thread.start()
         
         #self.start_QTM()
           
@@ -96,6 +98,7 @@ class Server:
             # Strat sending/receiving
             self.start_receiving()
             self.start_sending()
+
 
         except Exception as ex:
             log_and_print(ex)
@@ -168,7 +171,10 @@ class Server:
                 data = self.ground_station.recv(self.__message_size).decode()
                 if self.isGround_station_connected:
                     self.execute_message(data)
-        except:
+        except Exception as ex:
+            if ex == SystemExit:
+                print("stopped")
+                return
             if not self.__needs_to_stop_receiving_gs:
                 log_and_print(f"Error in receiving a message from {self.name}",Server.WARNING)
                 resend = input("Do you want to restart receiving again, if not the client will be disconnected (Y/n)?")
@@ -217,27 +223,30 @@ class Server:
                 case "shutdown":
                     self.shutdown()
 
-    
+    def Handle_server_activity(self):
+        while True:
+            if not self.isServeropen:
+                self.__sock.close()
+                self.stop_sending()
+                self.stop_receiving()
+                self.isServerrunning = False
+                self.Server_command_thread.join()
+                self.isGround_station_connected = False        
+                self.isServerrunning = False    
+                exit()
+            time.sleep(5)
     def shutdown(self):
         '''
         Shutdwon the server
         '''
         try:
             log_and_print("Shutting down the server",Server.WARNING)
+            self.isServeropen = False
             # Disconnecting all the clients
             # if self.isGround_station_connected:
             #     self.ground_station.sendall(str("shutdown").encode())
-            self.__sock.close()
-            self.stop_sending()
-            if threading.currentThread().name == self.receiving_thread.name:
-                sys.exit()
-                SystemExit  
-                self.stop_receiving()
-            self.__needs_to_stop_receiving_gs = False
-            self.isGround_station_connected = False
-            # Closing the TCP server Connection
-            self.isServerrunning = False
-            exit()
+            if threading.current_thread().name == threading.main_thread().name:
+                self.Handle_server_activity()
         except:
             if not self.isGround_station_connected and not self.isServerrunning:
                 exit()
