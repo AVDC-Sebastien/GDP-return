@@ -7,194 +7,7 @@ import os
 import json
 
 HOST, PORT = '0.0.0.0', 65000
-logging.basicConfig(filename="GDP_retrun_server.log", level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
-logger = logging.getLogger("gdp-return")
-
-
-class Client:
-    def __init__(self,connected_client : socket.socket, address : list, isServerrunning : bool, message_size : int ):
-        
-        self.connected_client = connected_client
-
-        # Set the IP, port and the name
-        self.IP = address[0]
-        self.port = address[1]
-        self.name = str(self.IP)
-        self.named = False
-        log_and_print(f"Client connected with ip: {self.IP} on port: {self.port}",Server.INFO)
-        # Size of the message
-        self.__message_size = message_size
-
-        # Message to send
-        self.__msg_to_send = ""
-        # Activity of the server
-        self.isServerrunning = isServerrunning
-
-        # Activity of the client
-        self.client_isConnected = True
-
-        # Thread bool
-        self.__needs_to_stop_sending = False
-        self.__needs_to_stop_receiving = False
-        self.print_received_data = True
-
-        # QTM
-        self.isQTM_running = False
-        self.start_QTM = False
-        
-        # Strat sending/receiving
-        self.start_receiving()
-        self.start_sending()
-
-    # region miscellaneous
-    def change_message_size(self,new_size):
-        try:
-            self.connected_client.sendall(str(f"gdp-return -new_message_size=={self.__message_size} ").encode())
-        except Exception as e:
-            log_and_print(e)
-        log_and_print(f"Message size changed from {self.__message_size} to {new_size}",Server.INFO)
-        self.__message_size = new_size
-        return
-
-    def change_name(self,new_name : str):
-        try:
-            if not self.named:
-                self.name = new_name
-                log_and_print(f"Name changed to {self.name} for {self.IP} ",Server.INFO)
-                self.named = True
-        except:
-            log_and_print("The new name: '{new_name}' is not a valid name",Server.WARNING)
-            self.connected_client.sendall(str(f"\033[93mWarning! The new name: '{new_name}' is not a valid name\033[00m").encode())
-            return
-# endregion
-
-    # region Sending message
-    def start_sending(self):
-        '''
-        Initiate the sending message thread
-        '''
-        self.needs_to_stop_sending = False
-        self.sending_thread = threading.Thread(target = self.send_message)
-        self.sending_thread.start()
-        log_and_print(f"Starting sending messages to {self.name}",Server.GREEN)
-
-    def stop_sending(self):
-        '''
-        Stop the sending thread
-        '''
-        self.__needs_to_stop_sending = True
-        self.sending_thread.join()
-        log_and_print(f"Stopped sending messages to {self.name}",Server.INFO)
-
-    def send_message(self):
-        '''
-        Send message to the connected client
-        '''
-        try:
-            while (not self.__needs_to_stop_sending) and self.isServerrunning:            
-                if self.__msg_to_send != "":
-                    self.connected_client.sendall(str(self.__msg_to_send).encode())
-        except:
-                if self.__needs_to_stop_sending and not self.isServerrunning:
-                    log_and_print("Stopped sending",Server.INFO)
-                elif self.client_isConnected:
-                    log_and_print(f"Message couldn't be sent to {self.name}. Restarting sending...",Server.WARNING)
-                    self.stop_sending()
-                    self.start_sending()
-                else:
-                    log_and_print(f"Client {self.name} is not connected",Server.WARNING)
-                    self.disconnect_client()        
-    #endregion
-    
-    # region Receiveing message
-    def start_receiving(self):
-        '''
-        Initiate the sending message thread
-        '''
-        self.__needs_to_stop_receiving = False
-        self.receiving_thread = threading.Thread(target = self.receive_message)
-        self.receiving_thread.start()
-        log_and_print(f"Starting receiving messages from {self.name}",Server.GREEN)
-
-    def stop_receiving(self):
-        '''
-        Stop the sending thread
-        '''
-        self.__needs_to_stop_receiving = True
-        self.receiving_thread.join()
-        log_and_print(f"Stopped receiving messages from {self.name}",Server.INFO)   
-
-    def receive_message(self):
-        '''
-        Receive the message and print it (or not print_received_data) and execute the msg received
-        '''
-        try:
-            while (not self.__needs_to_stop_receiving) and self.isServerrunning:
-                #Check if the previous received message has been executed
-                data = self.connected_client.recv(self.__message_size).decode()
-                if self.client_isConnected:
-                    self.execute_message(data)
-        except:
-            if not self.__needs_to_stop_receiving:
-                log_and_print(f"Error in receiving a message from {self.name}",Server.WARNING)
-                resend = input("Do you want to restart receiving again, if not the client will be disconnected (Y/n)?")
-                while resend.lower() not in ('y','n'):
-                    resend = input("Please only answer by 'Y' or 'n' only: ")
-                if resend.lower() == 'y':
-                    self.stop_receiving()
-                    self.start_receiving()
-                else:
-                    self.disconnect_client()
-                    
-    def execute_message(self,msg : str):
-        '''
-        Execute the incoming message 
-        '''
-        match msg.split("==")[0]:
-            case "stop":
-                self.stop_sending()
-
-            case "start":
-                self.start_sending()
-
-            case "exit" | "disconnect" | "shutdown":
-                self.disconnect_client()
-
-            case "ping":
-                self.connected_client.sendall(str("ping").encode())
-            
-            case "gdp-return -new_name":
-                self.change_name(msg.split("==")[1])
-
-            case "Start -QTM":
-                self.start_QTM = True
-            
-            case "Stop -QTM":
-                self.start_QTM = False
-            
-            case _:
-                if self.print_received_data and self.client_isConnected:
-                        log_and_print(f"Message received from {self.name} : " + msg)
-            # case _:
-            #      self.__msg_to_send = msg
-    # endregion
-                            
-    def disconnect_client(self):
-            try:
-                log_and_print(f"Disconnecting {self.name} in the background")
-                self.client_isConnected = False
-            except Exception as ex:
-                disconnect = input("\033[93mWarning! Coulnd't disconnect the client, try again (Y/n)?\033[00m")
-                while disconnect.lower() not in ('y','n'):
-                    disconnect = input("Please only answer by 'Y' or 'n' only: ")
-                if disconnect.lower() == 'y':
-                    self.disconnect_client()
-                else:
-                    log_and_print(ex)
-                    log_and_print("The server will now shutdown")
-                    exit()
-
-    
+logging.basicConfig(filename="GDP_retrun_server.log", level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')   
 
 class Server:
     
@@ -223,10 +36,9 @@ class Server:
         self.max_clients = 4
 
         # Boolean of the clients
-        self.__connected_client : list[Client] = []
-        self.sending_thread : list[threading.Thread] = []
+        self.ground_station : socket.socket = None
+        self.isGround_station_connected = False
         self.print_all_received_data = True
-        self.__any_client_connected = False
 
         # QTM
         self.__connection_password = "gdp-return"
@@ -244,8 +56,7 @@ class Server:
         '''
         Start the different thread and functions we need
         '''
-        self.connecting_client_thread = threading.Thread(target = self.open_server)
-        self.connecting_client_thread.start()
+        self.open_server()
         self.Server_command()
         
         #self.start_QTM()
@@ -255,97 +66,193 @@ class Server:
         Manage the connection of the clients
         '''
         try:
-            while self.__server_open_to_connect:
-                if not self.isServeropen:
-                    logger.info(f"Opening the local server on port: {HOST}")
-                    log_and_print(f"Opening the local server on port: {HOST}")
-                    self.__sock.listen(self.max_clients)
-                    log_and_print("Server open",Server.GREEN)
-                    self.isServeropen = True
-                
-                # Connect the client
-                if len(self.__connected_client) < self.max_clients:
-                    self.__full = False
-                    connected_client, adress = self.__sock.accept()
-                    # Create the new client identity
-                    if adress[0] != "127.0.0.1":
-                        self.__connected_client.append(Client(connected_client,adress,self.isServerrunning,self.__message_size))
-                    self.__any_client_connected = True
+        
+            log_and_print(f"Opening the local server on port: {HOST}")
+            self.__sock.listen(self.max_clients)
+            log_and_print("Server open",Server.GREEN)
+            self.isServeropen = True
+        
 
-                elif len(self.__connected_client) == self.max_clients:
-                    if self.__full == True:
-                        log_and_print(f"The server is full. Clients connected:")
-                        for client in self.__connected_client:
-                            log_and_print(f"- {client.name}")
-                        self.__full = True
+            connected_client, address = self.__sock.accept()
+
+            # Set the IP, port and the name
+            self.IP = address[0]
+            self.port = address[1]
+            self.name = "Ground_station"
+            log_and_print(f"Ground station connected with ip: {self.IP} on port: {self.port}",Server.INFO)
+            self.ground_station = connected_client
+            
+            # Message to send
+            self.msg_to_send : str = ""
+
+            # Activity of the client
+            self.isGround_station_connected = True
+
+            # Thread bool
+            self.__needs_to_stop_sending_gs = False
+            self.__needs_to_stop_receiving_gs = False
+            self.print_received_data = True
+            
+            # Strat sending/receiving
+            self.start_receiving()
+            self.start_sending()
 
         except Exception as ex:
             log_and_print(ex)
             log_and_print("Could not connect",Server.WARNING)
             self.open_server()
     
+    # region Ground Station
+    # region Sending message
+    def start_sending(self):
+        '''
+        Initiate the sending message thread
+        '''
+        self.__needs_to_stop_sending_gs = False
+        self.sending_thread = threading.Thread(target = self.send_message)
+        self.sending_thread.start()
+        log_and_print(f"Starting sending messages to {self.name}",Server.GREEN)
+
+    def stop_sending(self):
+        '''
+        Stop the sending thread
+        '''
+        self.__needs_to_stop_sending_gs = True
+        self.sending_thread.join()
+        log_and_print(f"Stopped sending messages to {self.name}",Server.INFO)
+
+    def send_message(self):
+        '''
+        Send message to the connected client
+        '''
+        try:
+            while (not self.__needs_to_stop_sending_gs) and self.isServerrunning:            
+                if self.msg_to_send != "":
+                    self.ground_station.sendall(str(self.msg_to_send).encode())
+        except:
+                if self.__needs_to_stop_sending_gs and not self.isServerrunning:
+                    log_and_print("Stopped sending",Server.INFO)
+                elif self.isGround_station_connected:
+                    log_and_print(f"Message couldn't be sent to {self.name}. Restarting sending...",Server.WARNING)
+                    self.stop_sending()
+                    self.start_sending()
+                else:
+                    log_and_print(f"Client {self.name} is not connected",Server.WARNING)
+    #endregion
+    
+    # region Receiveing message
+    def start_receiving(self):
+        '''
+        Initiate the sending message thread
+        '''
+        self.__needs_to_stop_receiving_gs = False
+        self.receiving_thread = threading.Thread(target = self.receive_message)
+        self.receiving_thread.start()
+        log_and_print(f"Starting receiving messages from {self.name}",Server.GREEN)
+
+    def stop_receiving(self):
+        '''
+        Stop the sending thread
+        '''
+        self.__needs_to_stop_receiving_gs = True
+        self.receiving_thread.join()
+        log_and_print(f"Stopped receiving messages from {self.name}",Server.INFO)   
+
+    def receive_message(self):
+        '''
+        Receive the message and print it (or not print_received_data) and execute the msg received
+        '''
+        try:
+            while (not self.__needs_to_stop_receiving_gs) and self.isServerrunning:
+                #Check if the previous received message has been executed
+                data = self.ground_station.recv(self.__message_size).decode()
+                if self.isGround_station_connected:
+                    self.execute_message(data)
+        except:
+            if not self.__needs_to_stop_receiving_gs:
+                log_and_print(f"Error in receiving a message from {self.name}",Server.WARNING)
+                resend = input("Do you want to restart receiving again, if not the client will be disconnected (Y/n)?")
+                while resend.lower() not in ('y','n'):
+                    resend = input("Please only answer by 'Y' or 'n' only: ")
+                if resend.lower() == 'y':
+                    self.stop_receiving()
+                    self.start_receiving()
+                else:
+                    print("line 367")                    
+    
+    def execute_message(self,msg : str):
+        '''
+        Execute the incoming message 
+        '''
+        match msg.split("==")[0]:
+            case "stop":
+                self.stop_sending()
+
+            case "start":
+                self.start_sending()
+
+            case "exit" | "disconnect" | "shutdown":
+                self.shutdown()
+
+            case "ping":
+                self.ground_station.sendall(str("ping").encode())
+
+            case "Start -QTM":
+                self.start_QTM = True
+            
+            case "Stop -QTM":
+                self.start_QTM = False
+            
+            case _:
+                if self.print_received_data and self.isGround_station_connected:
+                        log_and_print(f"Message received from {self.name} : " + msg)
+
+    # endregion
+    # endregion
+
     def Server_command(self):
         while self.isServerrunning:
             command = input("__________________________________\n\033[92mgdp-return: \033[00m")
             match command:
                 case "shutdown":
                     self.shutdown()
-                case "disconnect -all":
-                    self.update_clients("disconnect")
-                case "clients -list":
-                    self.list_of_clients()
-    
-    def list_of_clients(self):
-        log_and_print(self.__connected_client)
 
+    
     def shutdown(self):
         '''
         Shutdwon the server
         '''
         try:
-            log_and_print("shutting down the server",Server.WARNING)
+            log_and_print("Shutting down the server",Server.WARNING)
             # Disconnecting all the clients
-            self.__server_open_to_connect = False
-            socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(self.__server_address)
-            self.connecting_client_thread.join()
-            print("1")
-            if self.__any_client_connected:
-                self.update_clients("disconnect")
-            self.__any_client_connected = False
-            print("2")
+            # if self.isGround_station_connected:
+            #     self.ground_station.sendall(str("shutdown").encode())
+            self.__sock.close()
+            self.stop_sending()
+            if threading.currentThread().name == self.receiving_thread.name:
+                sys.exit()
+                SystemExit  
+                self.stop_receiving()
+            self.__needs_to_stop_receiving_gs = False
+            self.isGround_station_connected = False
             # Closing the TCP server Connection
             self.isServerrunning = False
             exit()
         except:
-            if not self.__any_client_connected and not self.isServerrunning:
+            if not self.isGround_station_connected and not self.isServerrunning:
                 exit()
-            elif self.__any_client_connected:
+            elif self.isGround_station_connected:
                 log_and_print("Disconnecting client failed",Server.ERROR)
                 again = input("Try again if not the server will force shutdown ? (Y/n)")
                 while again.lower() not in ('y','n'):
                     again = input("Please only answer by 'Y' or 'n' only: ")
                 if again.lower() == 'y':
-                    self.shutdown()
-                else:
                     exit()
+                else:
+                    self.shutdown()
             else:
                 print("weird")
 
-    def update_clients(self,command):
-        match command:
-            # Disconnecting all the clients
-            case "disconnect":
-                log_and_print("Disconnecting the clients...")
-                for client in self.__connected_client:
-                    client.disconnect_client()    
-                log_and_print("Clients disconnected",Server.GREEN)
-            # Update the QTM running status
-            case "QTM_isrunning":
-                for client in self.__connected_client:
-                    client.isQTM_running = True
-            case "QTM_isstoped":
-                for client in self.__connected_client:
-                    client.isQTM_running = False
 
     # region Getting the data from qtm
                 

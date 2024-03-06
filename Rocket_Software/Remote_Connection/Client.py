@@ -22,7 +22,6 @@ class Client:
         self.__message_size = new_message_size
         self.__msg = 1
 
-        self.client_name = input("Client name: ")
         # Boolean of the client
         self.__isClientrunning = True
         self.print_received_data = True
@@ -46,7 +45,6 @@ class Client:
             self.__sock.connect(self.__server_address)
             self.__isConnected = True
             print_with_colors("Connection done!","Green")
-            self.__sock.sendall(str("gdp-return -new_name==" + self.client_name).encode())
             self.start_sending()
             self.start_receiving()
         except:
