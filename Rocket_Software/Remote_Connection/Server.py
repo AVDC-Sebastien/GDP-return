@@ -57,9 +57,11 @@ class Server:
         '''
         Start the different thread and functions we need
         '''
-        self.open_server()
         self.Server_command_thread = threading.Thread(target=self.Server_command)
+        self.Server_command_thread.daemon = True
         self.Server_command_thread.start()
+        self.open_server()
+        self.Handle_server_activity()
         
         #self.start_QTM()
           
@@ -172,10 +174,8 @@ class Server:
                 if self.isGround_station_connected:
                     self.execute_message(data)
         except Exception as ex:
-            if ex == SystemExit:
-                print("stopped")
-                return
             if not self.__needs_to_stop_receiving_gs:
+                print(ex)
                 log_and_print(f"Error in receiving a message from {self.name}",Server.WARNING)
                 resend = input("Do you want to restart receiving again, if not the client will be disconnected (Y/n)?")
                 while resend.lower() not in ('y','n'):
@@ -185,7 +185,9 @@ class Server:
                     self.start_receiving()
                 else:
                     print("line 367")                    
-    
+            else:
+                print("h")
+
     def execute_message(self,msg : str):
         '''
         Execute the incoming message 
@@ -226,26 +228,31 @@ class Server:
     def Handle_server_activity(self):
         while True:
             if not self.isServeropen:
+                log_and_print("Shutting down the server",Server.WARNING)
+                if self.isGround_station_connected:
+                    self.stop_sending()
+                    self.stop_receiving()
+                else:
+                    socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(HOST,PORT)
+                self.__sock.shutdown(socket.SHUT_RDWR)
                 self.__sock.close()
-                self.stop_sending()
-                self.stop_receiving()
                 self.isServerrunning = False
-                self.Server_command_thread.join()
                 self.isGround_station_connected = False        
                 self.isServerrunning = False    
                 exit()
             time.sleep(5)
+    
     def shutdown(self):
         '''
         Shutdwon the server
         '''
         try:
-            log_and_print("Shutting down the server",Server.WARNING)
             self.isServeropen = False
+            self.__needs_to_stop_receiving_gs = True
             # Disconnecting all the clients
             # if self.isGround_station_connected:
             #     self.ground_station.sendall(str("shutdown").encode())
-            if threading.current_thread().name == threading.main_thread().name:
+            if not self.isGround_station_connected:
                 self.Handle_server_activity()
         except:
             if not self.isGround_station_connected and not self.isServerrunning:
@@ -260,7 +267,7 @@ class Server:
                 else:
                     self.shutdown()
             else:
-                print("weird")
+                exit()
 
 
     # region Getting the data from qtm

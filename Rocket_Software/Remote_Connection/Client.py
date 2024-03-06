@@ -89,9 +89,9 @@ class Client:
                 print("Disconnection...")
                 self.__isConnected = False
                 self.__sock.sendall(str("disconnect").encode())
-                time.sleep(1)                
                 self.__needs_to_stop_sending = True
                 self.__needs_to_stop_receiving = True
+                self.__sock.shutdown(socket.SHUT_RDWR)
                 self.__sock.close()
                 self.__isClientrunning = False
                 print_with_colors("Disconnected","Green")
