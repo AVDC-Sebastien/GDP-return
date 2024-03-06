@@ -1,0 +1,20 @@
+05-Mar-24 10:53:39 - INFO - This is just an information for you
+05-Mar-24 10:53:39 - WARNING - OOPS!!!Its a Warning
+05-Mar-24 10:53:39 - ERROR - Have you try to divide a number by zero
+05-Mar-24 10:53:39 - CRITICAL - The Internet is not working....
+05-Mar-24 10:53:39 - INFO - test
+05-Mar-24 10:53:57 - WARNING - OOPS!!!Its a Warning
+05-Mar-24 10:53:57 - ERROR - Have you try to divide a number by zero
+05-Mar-24 10:53:57 - CRITICAL - The Internet is not working....
+05-Mar-24 10:54:30 - DEBUG - This is just a harmless debug message
+05-Mar-24 10:54:30 - INFO - This is just an information for you
+05-Mar-24 10:54:30 - WARNING - OOPS!!!Its a Warning
+05-Mar-24 10:54:30 - ERROR - Have you try to divide a number by zero
+05-Mar-24 10:54:30 - CRITICAL - The Internet is not working....
+05-Mar-24 10:54:30 - INFO - test
+05-Mar-24 10:59:20 - DEBUG - This is just a harmless debug message zegg
+05-Mar-24 10:59:20 - INFO - This is just an information for you
+05-Mar-24 10:59:20 - WARNING - OOPS!!!Its a Warning
+05-Mar-24 10:59:20 - ERROR - Have you try to divide a number by zero
+05-Mar-24 10:59:20 - CRITICAL - The Internet is not working....
+05-Mar-24 10:59:20 - INFO - test

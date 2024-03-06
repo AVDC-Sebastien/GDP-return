@@ -3,6 +3,7 @@
 # thread
 
 import threading
+import time
 
 stop_threads = False
 
@@ -12,27 +13,26 @@ class send_receive_msg():
         self.__msg = first_msg
         self.__new_msg = ""
         
-    def start_sending(self):
-        self.t1 = threading.Thread(target = self.sending, args= [self.__msg])
+    def RunThread(self):
+        self.t1 = threading.Thread(target = self.ThreadAction)
         self.t1.start()
 
-    def sending(self,msg):
+    def ThreadAction(self):
         while not self.__needs_to_stop:
-            msg = self.update_msg(msg)
-            self.__msg = msg
+            msg = self.get_update()
+            print(msg)
+            time.sleep(2)
+            # msg = self.update_msg(msg)
+            # self.__msg = msg
+
+    def get_update(self):
+        return self.__msg
     
     def update_msg(self,msg):
         if type(msg) == type(""):
             return msg + "1"
         else:
             return msg + 1            
-
-    def receiving(self):
-        while True:
-            print(self.__msg)
-        # msg = input("input")
-        # if msg == "stop":
-        #     self.__needs_to_stop = True
 
 
     def stop_sending(self):
@@ -42,8 +42,10 @@ class send_receive_msg():
 
     def stopping(self):
         while True:
-            self.__new_msg = self.__msg
-            print(self.__new_msg)
+            self.__msg = self.update_msg(self.__msg)
+            time.sleep(2)
+            # self.__new_msg = self.__msg
+            # print(self.__new_msg)
         self.msg = input("Kill ?")
         if self.msg == "yes":
             self.stop_sending()
@@ -52,10 +54,10 @@ class send_receive_msg():
 
             
 test_1 = send_receive_msg(1)
-test_1.start_sending()
-test_2 = send_receive_msg("1")
-test_2.start_sending()
+test_1.RunThread()
 test_1.stopping()
+test_2 = send_receive_msg("1")
+test_2.RunThread()
 test_2.stopping()
 
 
