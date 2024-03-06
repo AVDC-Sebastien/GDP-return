@@ -7,8 +7,10 @@ os.system('sudo rm /usr/lib/python3.11/EXTERNALLY-MANAGED')
 # List of the package we need
 pip_list = {
     "adafruit-circuitpython-bno055",
-    "imufusion",
-    "qtm==2.0.6"
+    "qtm==2.0.6",
+    "opencv-contrib-python",
+    "scipy",
+    "--upgrade --force-reinstall adafruit-blinka"
 }
 
 git_list = {
