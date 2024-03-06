@@ -8,6 +8,7 @@ ct_pos = [0 0 0.2]; % Vertical Distance of Centre of Thrust from the reference p
 cg_pos = [0.0 0 0.7]; % Vertical Distance of Centre of Gravity from the reference point
 
 Mass = 5; % Mass in kg
+Inertia = eye(3);
 
 %%% Aerodynamics %%%
 C_d = 1.05;   % Drag coefficient
