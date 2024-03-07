@@ -21,3 +21,4 @@ Max_Thrust = 22.4; % Max EDF Thrust (N)
 %%% Sensor Placement %%%
 %dist_pos = % Distance Sensor Position
 
+K_tf = tf([-254.7 -81.76 -6.563], [1 227.4 5004 0]);
