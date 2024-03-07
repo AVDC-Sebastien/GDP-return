@@ -16,7 +16,7 @@ Area = 0.1;   % Area
 
 %%% Actuator Data %%%
 TVC_Range = 10; % Max Nozzle Deflection (deg)
-Max_Thrust = 22.4; % Max EDF Thrust (N)
+Max_Thrust = 22.4; % Max One EDF Thrust (N)
 
 %%% Sensor Placement %%%
 %dist_pos = % Distance Sensor Position
