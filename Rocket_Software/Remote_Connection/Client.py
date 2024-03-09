@@ -1,6 +1,8 @@
 import socket
 import threading
 import time
+import msvcrt
+import os
 
 HOST, PORT = '138.250.151.144', 65000
 
@@ -9,7 +11,7 @@ class Client:
     __message_size = 32
     
     def __init__(self,host,port,new_message_size = __message_size):
-        
+        print("_"*os.get_terminal_size()[0]+"\n\033[92mgdp-return: \033[00m")
         new_host = input("Change IP?(Y/n): ")
         while new_host.lower() not in ("y","n"):
             new_host = input("please type 'Y' or 'n': ")
@@ -28,7 +30,7 @@ class Client:
         self.__isConnected = False
         self.__needs_to_stop_sending = False
         self.__needs_to_stop_receiving = False
-
+        self.__isKill_switch_on = True
 
         self.__sending_time = []
         self.start()
@@ -47,6 +49,7 @@ class Client:
             print_with_colors("Connection done!","Green")
             self.start_sending()
             self.start_receiving()
+
         except:
             print_with_colors("Could not connect","Warning")
             try_again = input("Want to try again ?(Y/N): ")
@@ -81,7 +84,7 @@ class Client:
                 print("Disconnection failed")
             else:
                 print("Error")
-                      
+
     def disconnect(self):
         try:
             if self.__isConnected:
@@ -91,6 +94,7 @@ class Client:
                 self.__sock.sendall(str("disconnect").encode())
                 self.__needs_to_stop_sending = True
                 self.__needs_to_stop_receiving = True
+                self.__isKill_switch_on = False
                 self.__sock.shutdown(socket.SHUT_RDWR)
                 self.__sock.close()
                 self.__isClientrunning = False
@@ -121,7 +125,25 @@ class Client:
                     print("There is no server connected")
     
     def update_msg(self):
-        msg = input("Message to send: ")
+        print("_"*os.get_terminal_size()[0]+"\n\033[92mgdp-return: \033[00m")
+        msg = ""
+        while True:
+            if msvcrt.kbhit():
+                key_stroke = msvcrt.getch()
+                if key_stroke==b'\x1b':
+                    self.shutdown()
+                    return
+                elif key_stroke==b'\r':
+                    break
+                elif key_stroke==b'\x08':   
+                    msg = msg[:-1]
+                    print(f"\033[{os.get_terminal_size()[1]-1};{len(msg)+len("gdp-return:  ")}H" + " "*10)
+                else:
+                    try:
+                        print(f"\033[{os.get_terminal_size()[1]-1};{len(msg)+len("gdp-return:  ")}H" + key_stroke.decode())
+                        msg += key_stroke.decode()
+                    except:
+                        pass
         match msg:
             
             case "shutdown":

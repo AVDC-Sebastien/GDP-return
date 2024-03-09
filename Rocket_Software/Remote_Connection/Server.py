@@ -3,12 +3,10 @@ import qtm
 import socket
 import threading
 import logging
-import os
-import json
 import time
+from ESP32_Com import ESP32
 
 HOST, PORT = '0.0.0.0', 65000
-logging.basicConfig(filename="GDP_retrun_server.log", level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')   
 
 class Server:
     
@@ -18,9 +16,10 @@ class Server:
     
     def __init__(self,host :str = '0.0.0.0',port : int = 65000 ,new_message_size = __default_message_size):
         '''
-        Initialize the server
+        Initialize the server with the define host and port, and a fixed size message
         '''
         # Create the log file
+        logging.basicConfig(filename="GDP_retrun_server.log", level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S',force=True)   
 
         # Create a TCP socket
         self.__sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)     
@@ -49,10 +48,15 @@ class Server:
         self.__qtm_position = []
         self.__qtm_rotation = []
 
+        # ESP32
+        self.ESP32 : ESP32 = ESP32()
+        self.ESP32_data = "data"
+
+
 
         self.start_server()
 
-
+    # region Init Server
     def start_server(self):
         '''
         Start the different thread and functions we need
@@ -106,7 +110,8 @@ class Server:
             log_and_print(ex)
             log_and_print("Could not connect",Server.WARNING)
             self.open_server()
-    
+    # endregion
+            
     # region Ground Station
     # region Sending message
     def start_sending(self):
@@ -193,10 +198,14 @@ class Server:
         Execute the incoming message 
         '''
         match msg.split("==")[0]:
-            case "stop":
+            case "start -ESP32":
+                self.Start_ESP32()
+            case "stop -ESP32":
+                self.Stop_ESP32()
+            case "stop -com":
                 self.stop_sending()
 
-            case "start":
+            case "start -com":
                 self.start_sending()
 
             case "exit" | "disconnect" | "shutdown":
@@ -218,6 +227,7 @@ class Server:
     # endregion
     # endregion
 
+    # region Server Main thread here
     def Server_command(self):
         while self.isServerrunning:
             command = input("__________________________________\n\033[92mgdp-return: \033[00m")
@@ -225,6 +235,7 @@ class Server:
                 case "shutdown":
                     self.shutdown()
 
+    #### Main thread ####
     def Handle_server_activity(self):
         while True:
             if not self.isServeropen:
@@ -268,7 +279,7 @@ class Server:
                     self.shutdown()
             else:
                 exit()
-
+    # endregion
 
     # region Getting the data from qtm
                 
@@ -339,8 +350,18 @@ class Server:
 
     # endregion
 
+    # region ESP32
+    def Start_ESP32(self):
+        self.ESP32_com_thread = threading.Thread(target=self.ESP32.Start_sending,args=[self.ESP32_data])
+        self.ESP32_com_thread.start()
+        log_and_print(f"Start sending data to ESP32 from {self.port}...",Server.GREEN)
 
-
+    
+    def Stop_ESP32(self):
+        self.ESP32.Stop_sending()
+        self.ESP32_com_thread.join()
+        log_and_print(f"Stopped sending data to ESP32 from {self.port}...",Server.GREEN)
+    # endregion
 
 def log_and_print(txt: str, level: int = Server.INFO):
     print_with_colors(txt,level)
@@ -356,37 +377,22 @@ def log_and_print(txt: str, level: int = Server.INFO):
         case Server.CRITICAL:
             logging.critical(txt)
         case Server.GREEN:
-            logging.info(f"\033[92m{txt}\033[00m")
+            logging.info(txt+" !!")
 
 def print_with_colors(txt:str,txt_type:str):
     match txt_type:
-        case "debug":
+        case Server.DEBUG:
             print("debug" + txt)
-        case "info":
+        case Server.INFO:
             print(txt)
-        case "error":
+        case Server.ERROR:
             print(f"\033[91mError: {txt}\033[00m")
-        case "warning":
+        case Server.WARNING:
             print(f"\033[93mWarning: {txt}\033[00m")
-        case "critical":
+        case Server.CRITICAL:
             print(f"\033[93mCritical !!! {txt}\033[00m")
-        case "Green":
+        case Server.GREEN:
             print(f"\033[92m{txt}\033[00m")
-
-def handle_json_file(file_path, default_data=None):
-    if os.path.exists(file_path):
-        # If the file exists, open and read it
-        with open(file_path, 'r') as file:
-            data = json.load(file)
-        print(f"Existing JSON file found and loaded: {file_path}")
-    else:
-        # If the file does not exist, create a new one with default data
-        data = default_data or {}
-        with open(file_path, 'w') as file:
-            json.dump(data, file, indent=2)
-        print(f"New JSON file created: {file_path}")
-
-    return data
 
 
 
