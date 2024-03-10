@@ -9,14 +9,10 @@ syms F_d F_dx F_dy F_dz % Force Drag Body
 syms Vb Vbx Vby Vbz     % Velocity Body
 syms C_d A              % Drag Coeff, Area
 syms Phi Theta Psi      % Roll, Pitch, Yaw
-syms m g                % Mass
+syms m                  % Mass
 syms T Mz               % Thrust, Yaw Propulsion Torque
 syms CTPosx CTPosy CTPosz % Centre of thrust position
 syms CGPosx CGPosy CGPosz % Centre of gravity position
-syms d_T d_yaw d_roll d_pitch % Commands: Throttle, Yaw, TVC Roll TVC Pitch
-
-%% Actuator Model !!!TODO!!!
-
 
 %% Aero Model
 Vb_xy_len = sqrt(Vbx^2 + Vby^2);
@@ -28,12 +24,9 @@ F_dx = Vb_xy_normx * F_d_len;
 F_dy = Vb_xy_normy * F_d_len;
 F_dz = 0;
 
-F_ax = F_dx;
-F_ay = F_dy;
-F_az = F_dz;
-
 %% Gravity Model
-F_gez = g * m; % Force of Gravity - Earth
+a_gz = 9.81; % Acceleration of Gravity - Earth
+F_gez = a_gz * m; % Force of Gravity - Earth
 F_gx = (cos(Psi)*sin(Theta)*cos(Phi) + sin(Psi)*sin(Phi)) * F_gez;
 F_gy = (sin(Psi)*sin(Theta)*cos(Phi) - cos(Psi)*sin(Phi)) * F_gez;
 F_gz = (cos(Theta)*cos(Phi)) * F_gez;
@@ -68,11 +61,7 @@ M_tz = M_pz;
 
 %% Equations of Motion
 syms Vbx_dot Vby_dot Vbz_dot; % u_dot, v_dot, w_dot
-syms p q r p_dot q_dot r_dot;
+Vbx_dot = 
 
-Vbx_dot = F_tx / m; % u
-Vby_dot = F_ty / m; % v
-Vbz_dot = F_tz / m; % w
 
-p_dot = 
 
