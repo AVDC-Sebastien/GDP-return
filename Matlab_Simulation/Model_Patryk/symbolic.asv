@@ -1,4 +1,3 @@
-sympref('FloatingPointOutput',true);
 syms F_t F_tx F_ty F_tz % Force Total Body
 syms F_p F_px F_py F_pz % Force Propulsion Body
 syms F_g F_gx F_gy F_gz % Force Gravity Body
@@ -22,9 +21,8 @@ F_dz = 0;
 %% Gravity Model
 a_gz = 9.81; % Acceleration of Gravity - Earth
 F_gez = a_gz * m; % Force of Gravity - Earth
-F_gx = (cos(Psi)*sin(Theta)*cos(Phi) + sin(Psi)*sin(Phi)) * F_gez;
-F_gy = (sin(Psi)*sin(Theta)*cos(Phi) - cos(Psi)*sin(Phi)) * F_gez;
-F_gz = (cos(Theta)*cos(Phi)) * F_gez;
+F_gx = cos(Psi)*sin(Theta)*cos(Phi) + sin(Psi)*sin(Phi);
+F_gy = sin(Psi)*sin(Theta)*cos(Phi) - sin(Psi)*sin(Phi);
 
 %% Total
 F_tx = F_px + F_gx + F_ax;
