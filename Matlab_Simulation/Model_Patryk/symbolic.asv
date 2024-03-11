@@ -9,10 +9,15 @@ syms F_d F_dx F_dy F_dz % Force Drag Body
 syms Vb Vbx Vby Vbz     % Velocity Body
 syms C_d A              % Drag Coeff, Area
 syms Phi Theta Psi      % Roll, Pitch, Yaw
-syms m                  % Mass
-syms T Mz               % Thrust, Yaw Propulsion Torque
+syms m g                % Mass
+syms T Mz tvc_roll tvc_pitch    % Thrust, Yaw Propulsion Torque
 syms CTPosx CTPosy CTPosz % Centre of thrust position
 syms CGPosx CGPosy CGPosz % Centre of gravity position
+syms d_T d_yaw d_roll d_pitch   % Commands: Throttle, Yaw, TVC Roll TVC Pitch
+syms Ixx Iyy Izz        % Moment of inertia
+
+%% Actuator Model !!!TODO!!!
+
 
 %% Aero Model
 Vb_xy_len = sqrt(Vbx^2 + Vby^2);
@@ -24,17 +29,20 @@ F_dx = Vb_xy_normx * F_d_len;
 F_dy = Vb_xy_normy * F_d_len;
 F_dz = 0;
 
+F_ax = F_dx;
+F_ay = F_dy;
+F_az = F_dz;
+
 %% Gravity Model
-a_gz = 9.81; % Acceleration of Gravity - Earth
-F_gez = a_gz * m; % Force of Gravity - Earth
+F_gez = g * m; % Force of Gravity - Earth
 F_gx = (cos(Psi)*sin(Theta)*cos(Phi) + sin(Psi)*sin(Phi)) * F_gez;
-F_gy = (sin(Psi)*sin(Theta)*cos(Phi) - cos(Psi)*sin(Phi)) * F_gez;
-F_gz = (cos(Theta)*cos(Phi)) * F_gez;
+F_gy = (cos(Psi)*sin(Theta)*sin(Phi) - sin(Psi)*cos(Phi)) * F_gez;
+F_gz = (cos(Psi)*cos(Theta)) * F_gez;
 
 %% Propulsion Model
-Tdirx = (cos(Psi)*sin(Theta)*cos(Phi) + sin(Psi)*sin(Phi)) * -1;
-Tdiry = (sin(Psi)*sin(Theta)*cos(Phi) - cos(Psi)*sin(Phi)) * -1;
-Tdirz = (cos(Theta)*cos(Phi)) * -1;
+Tdirx = (cos(0)*sin(tvc_pitch)*cos(tvc_roll) + sin(0)*sin(tvc_roll)) * -1;
+Tdiry = (cos(0)*sin(tvc_pitch)*cos(tvc_roll) - cos(0)*sin(tvc_roll)) * -1;
+Tdirz = (cos(tvc_pitch)*cos(tvc_roll)) * -1;
 
 F_px = Tdirx * T;
 F_py = Tdiry * T;
@@ -61,7 +69,16 @@ M_tz = M_pz;
 
 %% Equations of Motion
 syms Vbx_dot Vby_dot Vbz_dot; % u_dot, v_dot, w_dot
-Vbx_dot = 
+syms p q r p_dot q_dot r_dot;
+syms x y z x_dot y_dot z_dot;
 
+x_dot = 
 
+Vbx_dot = F_tx / m; % u
+Vby_dot = F_ty / m; % v
+Vbz_dot = F_tz / m; % w
+
+p_dot = M_tx / Ixx; % p
+q_dot = M_ty / Iyy; % q
+r_dot = M_tz / Izz; % r
 
