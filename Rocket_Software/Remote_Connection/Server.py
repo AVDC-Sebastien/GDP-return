@@ -5,6 +5,8 @@ import threading
 import logging
 import time
 from ESP32_Com import ESP32
+import numpy as np
+
 
 HOST, PORT = '0.0.0.0', 65000
 
@@ -42,8 +44,9 @@ class Server:
 
         # QTM
         self.__connection_password = "gdp-return"
-        self.__disconnect_QTM = False
-        self.__qtm_IP = "138.250.154.110"
+        self.__disconnect_QTM = asyncio.Event()
+        self.__isQTM_connected = False
+        self.__qtm_IP = "138.250.154.168"
         self.__tolerance = 0.1
         self.__qtm_position = []
         self.__qtm_rotation = []
@@ -52,7 +55,8 @@ class Server:
         self.ESP32 : ESP32 = ESP32()
         self.ESP32_data = "data"
 
-
+        # Path
+        self.Emergency_landing = False
 
         self.start_server()
 
@@ -139,6 +143,11 @@ class Server:
             while (not self.__needs_to_stop_sending_gs) and self.isServerrunning:            
                 if self.msg_to_send != "":
                     self.ground_station.sendall(str(self.msg_to_send).encode())
+                if self.__isQTM_connected:
+                    self.test = self.__qtm_position
+                    self.test = self.test * 4
+                    print("true pos:",self.__qtm_position)
+                    print("test",self.test)
         except:
                 if self.__needs_to_stop_sending_gs and not self.isServerrunning:
                     log_and_print("Stopped sending",Server.INFO)
@@ -182,26 +191,20 @@ class Server:
             if not self.__needs_to_stop_receiving_gs:
                 print(ex)
                 log_and_print(f"Error in receiving a message from {self.name}",Server.WARNING)
-                resend = input("Do you want to restart receiving again, if not the client will be disconnected (Y/n)?")
-                while resend.lower() not in ('y','n'):
-                    resend = input("Please only answer by 'Y' or 'n' only: ")
-                if resend.lower() == 'y':
-                    self.stop_receiving()
-                    self.start_receiving()
-                else:
-                    print("line 367")                    
-            else:
-                print("h")
+                self.shutdown()
 
     def execute_message(self,msg : str):
         '''
         Execute the incoming message 
         '''
         match msg.split("==")[0]:
+
             case "start -ESP32":
                 self.Start_ESP32()
+
             case "stop -ESP32":
                 self.Stop_ESP32()
+
             case "stop -com":
                 self.stop_sending()
 
@@ -214,15 +217,15 @@ class Server:
             case "ping":
                 self.ground_station.sendall(str("ping").encode())
 
-            case "Start -QTM":
-                self.start_QTM = True
+            case "start -QTM":
+                self.start_QTM()
             
-            case "Stop -QTM":
-                self.start_QTM = False
+            case "stop -QTM":
+                self.stop_QTM()
             
             case _:
                 if self.print_received_data and self.isGround_station_connected:
-                        log_and_print(f"Message received from {self.name} : " + msg)
+                    log_and_print(f"Message received from {self.name} : " + msg)
 
     # endregion
     # endregion
@@ -241,6 +244,7 @@ class Server:
             if not self.isServeropen:
                 log_and_print("Shutting down the server",Server.WARNING)
                 if self.isGround_station_connected:
+                    self.stop_QTM()
                     self.stop_sending()
                     self.stop_receiving()
                 else:
@@ -251,7 +255,7 @@ class Server:
                 self.isGround_station_connected = False        
                 self.isServerrunning = False    
                 exit()
-            time.sleep(5)
+            time.sleep(2)
     
     def shutdown(self):
         '''
@@ -285,24 +289,25 @@ class Server:
                 
     def start_QTM(self):
         log_and_print("Starting QTM connection")
-        self.__disconnect_QTM = False
-        self.qtm_thread = threading.Thread(target=self.Async_start_QTM)
+        self.__disconnect_QTM.clear()
+        self.qtm_thread = threading.Thread(target=self.Async_start_QTM,args=[self.__qtm_position])
         self.qtm_thread.start()
 
     def stop_QTM(self):
-        self.__disconnect_QTM = True
+        self.__disconnect_QTM.set()
         self.qtm_thread.join()
 
-    def Async_start_QTM(self):
-        asyncio.get_event_loop().run_until_complete(self.get_QTM_data()) 
+    def Async_start_QTM(self,position):
+        asyncio.run(self.get_QTM_data(position)) 
 
-    async def get_QTM_data(self):
+    async def get_QTM_data(self,qtm_position):
         # Connect to the QTM 
         connection = await qtm.connect(self.__qtm_IP)
         if connection is None:
             return -1
-
-        self.update_clients("QTM_isrunning")
+        else:
+            self.__isQTM_connected = True
+        print("Connected")
         # Take control of the QTM system
         async with qtm.TakeControl(connection, self.__connection_password):
             state = await connection.get_state()
@@ -318,35 +323,41 @@ class Server:
             await connection.await_event(qtm.QRTEvent.EventCaptureStarted, timeout=10)
 
             def on_packet(packet):
+                pos = []
+                rot = []
                 info, bodies = packet.get_6d()
-                for position, rotation in bodies:
-                    self.update_position(position,rotation)
-            log_and_print(self.check_position(self.__qtm_position,self.__tolerance))
-            
-            while True:
-                try: 
-                    if not self.__disconnect_QTM:
-                        break
-                    await connection.stream_frames(components=["6d"], on_packet=on_packet)
-                except:
-                    pass
+                pos = np.array([bodies[0][0].x,bodies[0][0].y,bodies[0][0].z])
+                rot = np.array(bodies[0][1].matrix)
+                self.__qtm_position, self.__qtm_rotation = pos,rot
+
+            await connection.stream_frames(components=["6d"], on_packet=on_packet)
+            await self.__disconnect_QTM.wait()
             await connection.stream_frames_stop()
             # Stop the measurement
             await connection.stop()
             await connection.await_event(qtm.QRTEvent.EventCaptureStopped, timeout=10)
         connection.disconnect()
+    # endregion
+    
+
+    # region Control
+    def position_offset(self, position, offset_x : float = 0, offset_y : float = 0, offset_z : float = 0):
+        new_position = np.array([position[0] + offset_x, position[1] + offset_y, position[2] + offset_z])
+        return new_position
     
     def check_position(self, pos, tolerance = 0.1, x_min = 0, x_max = 100, y_min = 0, y_max = 100, z_min = 0, z_max = 100):
         min_values = [x_min,y_min,z_min]
         max_values = [x_max,y_max,z_max]
-        for i in range(min_values):
+        for i in range(len(min_values)):
             if pos[i] < (1+tolerance) * min_values[i] or pos > (1-tolerance)*max_values[i]:
-                return "Out of Bound"
-        return
+                self.Emergency_landing = True
     
-    def update_position(self,pos,rot):
-        self.__qtm_position = pos
-        self.__qtm_rotation = rot
+    def update_position(self, position, rotation, offset_x : float = 0, offset_y : float = 0, offset_z : float = 0,tolerance = 0.1, x_min = 0, x_max = 100, y_min = 0, y_max = 100, z_min = 0, z_max = 100):
+        true_position = self.position_offset(position)
+        self.check_position(true_position)
+        if self.Emergency_landing:
+            pass
+        return true_position, rotation
 
     # endregion
 

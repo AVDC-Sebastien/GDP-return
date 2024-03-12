@@ -4,7 +4,7 @@ import time
 import msvcrt
 import os
 
-HOST, PORT = '138.250.151.144', 65000
+HOST, PORT = '138.250.151.225', 65000
 
 class Client:
     
@@ -47,8 +47,8 @@ class Client:
             self.__sock.connect(self.__server_address)
             self.__isConnected = True
             print_with_colors("Connection done!","Green")
-            self.start_sending()
             self.start_receiving()
+            self.start_sending()
 
         except:
             print_with_colors("Could not connect","Warning")
@@ -166,9 +166,9 @@ class Client:
         return msg
 
     def start_sending(self):
+        print_with_colors("Starting sending messages !","Green")
         self.t1 = threading.Thread(target = self.send_message, args=[self.__msg])
         self.t1.start()
-        print("starting sending")
 
     def stop_sending(self):
         self.__needs_to_stop_sending = True
@@ -180,10 +180,10 @@ class Client:
         '''
         Initiate the sending message thread
         '''
+        print_with_colors("Starting receiving messages !","Green")
         self.__needs_to_stop_receiving = False
         self.receiving_thread = threading.Thread(target = self.receive_message)
         self.receiving_thread.start()
-        print_with_colors("Starting receiving messages !","Green")
 
     def stop_receiving(self):
         '''
