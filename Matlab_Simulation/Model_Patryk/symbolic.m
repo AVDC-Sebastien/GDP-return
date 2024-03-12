@@ -18,7 +18,10 @@ syms d_T d_yaw d_roll d_pitch   % Commands: Throttle, Yaw, TVC Roll TVC Pitch
 syms Ixx Iyy Izz        % Moment of inertia
 
 %% Actuator Model !!!TODO!!!
-
+T = d_T * 22.4 * 4;
+Mz = d_yaw * 0.2 * 0.075;
+tvc_roll = d_roll;
+tvc_pitch = d_pitch;
 
 %% Aero Model
 Vb_xy_len = sqrt(Vbx^2 + Vby^2);
