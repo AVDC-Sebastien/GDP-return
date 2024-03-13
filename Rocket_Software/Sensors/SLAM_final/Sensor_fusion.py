@@ -23,29 +23,125 @@ class sensor_fusion():
         # region parameters
         #----Paremeters-------
         #----IMU-------
-        self.Q_imu = []
-        self.R_imu = []
+        self.Q_imu = np.matrix([[0.3,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                                [0,0.3,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                                [0,0,0.3,0,0,0,0,0,0,0,0,0,0,0,0],
+                                [0,0,0,0.3,0,0,0,0,0,0,0,0,0,0,0],
+                                [0,0,0,0,0.3,0,0,0,0,0,0,0,0,0,0],
+                                [0,0,0,0,0,0.3,0,0,0,0,0,0,0,0,0],
+                                [0,0,0,0,0,0,0.3,0,0,0,0,0,0,0,0],
+                                [0,0,0,0,0,0,0,0.3,0,0,0,0,0,0,0],
+                                [0,0,0,0,0,0,0,0,0.3,0,0,0,0,0,0],
+                                [0,0,0,0,0,0,0,0,0,2,0,0,0,0,0],
+                                [0,0,0,0,0,0,0,0,0,0,2,0,0,0,0],
+                                [0,0,0,0,0,0,0,0,0,0,0,2,0,0,0],
+                                [0,0,0,0,0,0,0,0,0,0,0,0,2,0,0],
+                                [0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,2]]) 
+
+        self.R_imu = np.matrix([[0.5,0,0,0,0,0,0,0,0],
+                        [0,0.5,0,0,0,0,0,0,0],
+                        [0,0,0.5,0,0,0,0,0,0],
+                        [0,0,0,0.05,0,0,0,0,0],
+                        [0,0,0,0,0.05,0,0,0,0],
+                        [0,0,0,0,0,0.05,0,0,0],
+                        [0,0,0,0,0,0,0.05,0,0],
+                        [0,0,0,0,0,0,0,0.05,0],
+                        [0,0,0,0,0,0,0,0,0.05]])
 
         #-----lidar-----
-        self.Q_lidar = []
-        self.R_lidar = []
+        self.Q_lidar = np.matrix([[0.3,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                                [0,0.3,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                                [0,0,0.3,0,0,0,0,0,0,0,0,0,0,0,0],
+                                [0,0,0,0.3,0,0,0,0,0,0,0,0,0,0,0],
+                                [0,0,0,0,0.3,0,0,0,0,0,0,0,0,0,0],
+                                [0,0,0,0,0,0.3,0,0,0,0,0,0,0,0,0],
+                                [0,0,0,0,0,0,0.3,0,0,0,0,0,0,0,0],
+                                [0,0,0,0,0,0,0,0.3,0,0,0,0,0,0,0],
+                                [0,0,0,0,0,0,0,0,0.3,0,0,0,0,0,0],
+                                [0,0,0,0,0,0,0,0,0,2,0,0,0,0,0],
+                                [0,0,0,0,0,0,0,0,0,0,2,0,0,0,0],
+                                [0,0,0,0,0,0,0,0,0,0,0,2,0,0,0],
+                                [0,0,0,0,0,0,0,0,0,0,0,0,2,0,0],
+                                [0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,2]]) 
+        
+        self.R_lidar = 1
 
         #--camera----
-        self.Q_camera_top = []
-        self.R_camera_top = []
+        self.Q_camera_top = np.matrix([[0.3,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                                    [0,0.3,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                                    [0,0,0.3,0,0,0,0,0,0,0,0,0,0,0,0],
+                                    [0,0,0,0.3,0,0,0,0,0,0,0,0,0,0,0],
+                                    [0,0,0,0,0.3,0,0,0,0,0,0,0,0,0,0],
+                                    [0,0,0,0,0,0.3,0,0,0,0,0,0,0,0,0],
+                                    [0,0,0,0,0,0,0.3,0,0,0,0,0,0,0,0],
+                                    [0,0,0,0,0,0,0,0.3,0,0,0,0,0,0,0],
+                                    [0,0,0,0,0,0,0,0,0.3,0,0,0,0,0,0],
+                                    [0,0,0,0,0,0,0,0,0,2,0,0,0,0,0],
+                                    [0,0,0,0,0,0,0,0,0,0,2,0,0,0,0],
+                                    [0,0,0,0,0,0,0,0,0,0,0,2,0,0,0],
+                                    [0,0,0,0,0,0,0,0,0,0,0,0,2,0,0],
+                                    [0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                                    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,2]]) 
+        
+        self.R_camera_top = np.matrix([[0.2,0,0,0,0,0],
+                                [0,0.2,0,0,0,0],
+                                [0,0,0.2,0,0,0],
+                                [0,0,0,0.2,0,0],
+                                [0,0,0,0,0.2,0],
+                                [0,0,0,0,0,0.2]])
 
-        self.Q_camera_below = []
-        self.R_camera_below = []
+        self.Q_camera_below = np.matrix([[0.3,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                                        [0,0.3,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                                        [0,0,0.3,0,0,0,0,0,0,0,0,0,0,0,0],
+                                        [0,0,0,0.3,0,0,0,0,0,0,0,0,0,0,0],
+                                        [0,0,0,0,0.3,0,0,0,0,0,0,0,0,0,0],
+                                        [0,0,0,0,0,0.3,0,0,0,0,0,0,0,0,0],
+                                        [0,0,0,0,0,0,0.3,0,0,0,0,0,0,0,0],
+                                        [0,0,0,0,0,0,0,0.3,0,0,0,0,0,0,0],
+                                        [0,0,0,0,0,0,0,0,0.3,0,0,0,0,0,0],
+                                        [0,0,0,0,0,0,0,0,0,2,0,0,0,0,0],
+                                        [0,0,0,0,0,0,0,0,0,0,2,0,0,0,0],
+                                        [0,0,0,0,0,0,0,0,0,0,0,2,0,0,0],
+                                        [0,0,0,0,0,0,0,0,0,0,0,0,2,0,0],
+                                        [0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,2]]) 
+        
+        self.R_camera_below = np.matrix([[0.2,0,0,0,0,0],
+                                [0,0.2,0,0,0,0],
+                                [0,0,0.2,0,0,0],
+                                [0,0,0,0.2,0,0],
+                                [0,0,0,0,0.2,0],
+                                [0,0,0,0,0,0.2]])
 
-        self.initial_state_uav = []
-        self.P_uav = []
+        self.initial_state_uav = np.matrix([[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]])
+        self.P_uav = np.matrix([[2,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,0,2,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,0,0,2,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,0,0,0,2,0,0,0,0,0,0,0,0,0,0],
+                        [0,0,0,0,0,2,0,0,0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,2,0,0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0,2,0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0,0,2,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0,0,0,2,0,0,0,0,0],
+                        [0,0,0,0,0,0,0,0,0,0,2,0,0,0,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,2,0,0,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,2,0,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,2]]) 
         self.dt = 0.01
-        self.state_uav = self.initial_state_uav
+        self.state_uav = self.initial_state_uav.transpose()
 
-        self.initial_markers = []
-        self.P_marker = []
-        self.state_markers = self.initial_markers
-        self.Q_markers =[]
+        self.initial_markers = np.matrix([[0,0,0]])
+        self.P_marker = np.matrix([[1,0,0],
+                            [0,1,0],
+                            [0,0,1]])
+        self.state_markers = self.initial_markers.transpose()
+        self.Q_markers =np.matrix([[0.01,0,0],
+                            [0,0.01,0],
+                            [0,0,0.01]])
 
         self.dt_acceptable = 0.01
 
@@ -84,73 +180,73 @@ class sensor_fusion():
         # endregion
 
         
-    def state_function(state_uav, dt):
+    def state_function(self,state_uav, dt):
         
         #matrice rotation bodyframe->absolute
-        position = np.transpose(state_uav[-1][0])
-        velocity = np.transpose(state_uav[-1][1])
-        euler = np.transpose(np.radians(state_uav[-1][2]))
-        euler_deg = np.transpose(state_uav[-1][2])
-        angular_rate = np.transpose(state_uav[-1][3])
-        linear_acceleration = np.transpose(state_uav[-1][4])
-        ax = linear_acceleration[0]
-        ay = linear_acceleration[1]
-        az = linear_acceleration[2]
-        w1 = np.degrees(angular_rate[0])
-        w2 = np.degrees(angular_rate[1])
-        w3 = np.degrees(angular_rate[2])
+        position = np.transpose(np.matrix(state_uav[0:3]))
+        velocity = np.transpose(np.matrix(state_uav[3:6]))
+        euler = np.transpose(np.radians(np.matrix(state_uav[6:9])))
+        euler_deg = np.transpose(np.matrix(state_uav[6:9]))
+        angular_rate = np.transpose(np.matrix(state_uav[9:12]))
+        linear_acceleration = np.transpose(np.matrix(state_uav[12:15]))
+        ax = linear_acceleration[0,0]
+        ay = linear_acceleration[0,1]
+        az = linear_acceleration[0,2]
+        w1 = np.degrees(angular_rate[0,0])
+        w2 = np.degrees(angular_rate[0,1])
+        w3 = np.degrees(angular_rate[0,2])
         
 
         R_imu_abs = np.matrix([
-                                    [np.cos(euler[1])*np.cos(euler[0]), np.cos(euler[1])*np.sin(euler[0]), -np.sin(euler[1])],
-                                    [np.sin(euler[2])*np.sin(euler[1])*np.cos(euler[0])-np.cos(euler[2])*np.sin(euler[0]),  np.sin(euler[2])*np.sin(euler[1])*np.sin(euler[0])+np.cos(euler[2])*np.cos(euler[0]),  np.sin(euler[2])*np.cos(euler[1])],
-                                    [np.cos(euler[2])*np.sin(euler[1])*np.cos(euler[0])+np.sin(euler[2])*np.sin(euler[0]),  np.cos(euler[2])*np.sin(euler[1])*np.sin(euler[0])-np.sin(euler[2])*np.cos(euler[0]),  np.cos(euler[2])*np.cos(euler[1])]
+                                    [np.cos(euler[0,1])*np.cos(euler[0,0]), np.cos(euler[0,1])*np.sin(euler[0,0]), -np.sin(euler[0,1])],
+                                    [np.sin(euler[0,2])*np.sin(euler[0,1])*np.cos(euler[0,0])-np.cos(euler[0,2])*np.sin(euler[0,0]),  np.sin(euler[0,2])*np.sin(euler[0,1])*np.sin(euler[0,0])+np.cos(euler[0,2])*np.cos(euler[0,0]),  np.sin(euler[0,2])*np.cos(euler[0,1])],
+                                    [np.cos(euler[0,2])*np.sin(euler[0,1])*np.cos(euler[0,0])+np.sin(euler[0,2])*np.sin(euler[0,0]),  np.cos(euler[0,2])*np.sin(euler[0,1])*np.sin(euler[0,0])-np.sin(euler[0,2])*np.cos(euler[0,0]),  np.cos(euler[0,2])*np.cos(euler[0,1])]
             ])
         
         #matrice pour passer de anglar rate a euler rate
         B_theta = np.matrix([
-                            [0, np.sin(euler[2]), np.cos(euler[2])],
-                            [0, np.cos(euler[1])*np.cos(euler[2]), -np.cos(euler[1])*np.sin(euler[2])],
-                            [np.cos(euler[1]), np.sin(euler[1])*np.sin(euler[2]), np.sin(euler[1])*np.cos(euler[2])]
+                            [0, np.sin(euler[0,2]), np.cos(euler[0,2])],
+                            [0, np.cos(euler[0,1])*np.cos(euler[0,2]), -np.cos(euler[0,1])*np.sin(euler[0,2])],
+                            [np.cos(euler[0,1]), np.sin(euler[0,1])*np.sin(euler[0,2]), np.sin(euler[0,1])*np.cos(euler[0,2])]
                             ])
-        euler_dot = (1/(np.cos(euler[1])))*B_theta @ angular_rate
-        position = position + velocity*dt
+        euler_dot = (1/(np.cos(euler[0,1])))*B_theta @ angular_rate.transpose()
+        position = position.transpose() + velocity.transpose()*dt
 
-        velocity = velocity + (R_imu_abs@linear_acceleration)*dt
+        velocity = velocity.transpose() + (R_imu_abs@linear_acceleration.transpose())*dt
 
-        estimated_euler = euler_deg + euler_dot*dt
+        estimated_euler = euler_deg.transpose() + euler_dot.transpose()*dt
     
-        estimated_state_uav = np.array([[position[0], position[1], position[2],velocity[0], velocity[1], velocity[2], estimated_euler[0], estimated_euler[1], estimated_euler[2], angular_rate[0], angular_rate[1], angular_rate[2],linear_acceleration[0], linear_acceleration[1], linear_acceleration[2]]])
+        estimated_state_uav = np.array([[position[0,0], position[1,0], position[2,0],velocity[0,0], velocity[1,0], velocity[2,0], estimated_euler[0,0], estimated_euler[1,0], estimated_euler[2,0], angular_rate[0,0], angular_rate[0,1], angular_rate[0,2],linear_acceleration[0,0], linear_acceleration[0,1], linear_acceleration[0,2]]])
 
-        F47 = (-np.cos(euler[1])*np.sin(euler[0])*ax + np.cos(euler[1])*np.cos(euler[0])*ay)*dt
-        F48 = (-np.sin(euler[1])*np.cos(euler[0])*ax - np.sin(euler[1])*np.sin(euler[0])*ay - np.cos(euler[1])*az)*dt
-        F413 = np.cos(euler[1])*np.cos(euler[0])*dt
-        F414 = np.cos(euler[1])*np.sin(euler[0])*dt
-        F415 = -np.sin(euler[1])*dt
-        F57 = ((-np.sin(euler[2])*np.sin(euler[1])*np.sin(euler[0])-np.cos(euler[2])*np.cos(euler[0]))*ax + (np.sin(euler[2])*np.sin(euler[1])*np.cos(euler[0]) - np.cos(euler[2])*np.sin(euler[0]))*ay)*dt
-        F58 = ((np.sin(euler[2])*np.cos(euler[1])*np.cos(euler[0]))*ax + np.sin(euler[2])*np.cos(euler[1])*np.sin(euler[0])*ay - np.sin(euler[2])*np.sin(euler[1])*az)*dt
-        F59 = ((np.cos(euler[2])*np.sin(euler[1])*np.cos(euler[0]) + np.sin(euler[2])*np.sin(euler[0]))*ax + (np.cos(euler[2])*np.sin(euler[1])*np.sin(euler[0]) - np.cos(euler[0])*np.sin(euler[2]))*ay + np.cos(euler[2])*np.cos(euler[1])*az)*dt
-        F513 = (np.sin(euler[2])*np.sin(euler[1])*np.cos(euler[0])-np.cos(euler[2])*np.sin(euler[0]))*dt
-        F514 = (np.sin(euler[2])*np.sin(euler[1])*np.sin(euler[0]) + np.cos(euler[2])*np.cos(euler[0]))*dt
-        F515 = np.sin(euler[2])*np.cos(euler[1])*dt
-        F67 = ((-np.cos(euler[2])*np.sin(euler[1])*np.sin(euler[0]) + np.sin(euler[2])*np.cos(euler[0]))*ax + (np.cos(euler[2])*np.sin(euler[1])*np.cos(euler[0]) + np.sin(euler[2])*np.sin(euler[0]))*ay)*dt
-        F68 = (np.cos(euler[2])*np.cos(euler[1])*np.cos(euler[0])*ax + np.cos(euler[2])*np.cos(euler[1])*np.sin(euler[0])*ay - np.cos(euler[2])*np.sin(euler[1])*az)*dt
-        F69 = ((-np.sin(euler[2])*np.sin(euler[1])*np.cos(euler[0]) + np.cos(euler[2])*np.sin(euler[0]))*ax + (-np.sin(euler[2])*np.sin(euler[1])*np.sin(euler[0]) - np.cos(euler[2])*np.cos(euler[0]))*ay -np.sin(euler[2])*np.cos(euler[1])*az)*dt
-        F613 = (np.cos(euler[2])*np.sin(euler[1])*np.cos(euler[0]) + np.sin(euler[2])*np.sin(euler[0]))*dt
-        F614 = (np.cos(euler[2])*np.sin(euler[1])*np.sin(euler[0]) - np.sin(euler[2])*np.cos(euler[0]))*dt
-        F615 = np.cos(euler[2])*np.cos(euler[1])*dt
-        F78 = np.sin(euler[1])*(np.sin(euler[2])*w2 + np.cos(euler[2])*w3)*dt/(np.cos(euler[1])**2)
-        F79 = (np.cos(euler[2])*w2 - np.sin(euler[2])*w3)*np.cos(euler[1])*dt/(np.cos(euler[1])**2)
-        F711 = np.sin(euler[2])*dt/np.cos(euler[1])
-        F712 = np.cos(euler[2])*dt/np.cos(euler[1])
-        F88 = 1 + ((-np.sin(euler[1])*np.cos(euler[1])*w2 + np.sin(euler[1])*np.sin(euler[2])*w3)*np.cos(euler[1]) + np.sin(euler[1])*(np.cos(euler[1])*np.cos(euler[2])*w2 - np.cos(euler[1])*np.sin(euler[2])*w3))*dt/(np.cos(euler[1])**2)
-        F89 = (-np.sin(euler[2])*np.cos(euler[1])*w2 - np.cos(euler[1])*np.cos(euler[2])*w3)*np.cos(euler[1])*dt/(np.cos(euler[1])**2)
-        F811 = np.cos(euler[2])*dt
-        F812 = -np.sin(euler[2])*dt
-        F98 = ((-np.sin(euler[1])*w1 + np.cos(euler[1])*np.sin(euler[2])*w2 + np.cos(euler[1])*np.cos(euler[2])*w3)*np.cos(euler[1]) + np.sin(euler[1])*(np.cos(euler[1])*w1 + np.sin(euler[1])*np.sin(euler[2])*w2 + np.sin(euler[1])*np.cos(euler[2])*w3))*dt/(np.cos(euler[1])**2)
-        F99 = 1 + ((np.sin(euler[1])*np.cos(euler[2])*w2 - np.sin(euler[1])*np.sin(euler[2])*w3)*np.cos(euler[1]))*dt/(np.cos(euler[1])**2)
-        F911 = np.sin(euler[1])*np.sin(euler[2])*dt/np.cos(euler[1])
-        F912 = np.sin(euler[1])*np.cos(euler[2])*dt/np.cos(euler[1])
+        F47 = (-np.cos(euler[0,1])*np.sin(euler[0,0])*ax + np.cos(euler[0,1])*np.cos(euler[0,0])*ay)*dt
+        F48 = (-np.sin(euler[0,1])*np.cos(euler[0,0])*ax - np.sin(euler[0,1])*np.sin(euler[0,0])*ay - np.cos(euler[0,1])*az)*dt
+        F413 = np.cos(euler[0,1])*np.cos(euler[0,0])*dt
+        F414 = np.cos(euler[0,1])*np.sin(euler[0,0])*dt
+        F415 = -np.sin(euler[0,1])*dt
+        F57 = ((-np.sin(euler[0,2])*np.sin(euler[0,1])*np.sin(euler[0,0])-np.cos(euler[0,2])*np.cos(euler[0,0]))*ax + (np.sin(euler[0,2])*np.sin(euler[0,1])*np.cos(euler[0,0]) - np.cos(euler[0,2])*np.sin(euler[0,0]))*ay)*dt
+        F58 = ((np.sin(euler[0,2])*np.cos(euler[0,1])*np.cos(euler[0,0]))*ax + np.sin(euler[0,2])*np.cos(euler[0,1])*np.sin(euler[0,0])*ay - np.sin(euler[0,2])*np.sin(euler[0,1])*az)*dt
+        F59 = ((np.cos(euler[0,2])*np.sin(euler[0,1])*np.cos(euler[0,0]) + np.sin(euler[0,2])*np.sin(euler[0,0]))*ax + (np.cos(euler[0,2])*np.sin(euler[0,1])*np.sin(euler[0,0]) - np.cos(euler[0,0])*np.sin(euler[0,2]))*ay + np.cos(euler[0,2])*np.cos(euler[0,1])*az)*dt
+        F513 = (np.sin(euler[0,2])*np.sin(euler[0,1])*np.cos(euler[0,0])-np.cos(euler[0,2])*np.sin(euler[0,0]))*dt
+        F514 = (np.sin(euler[0,2])*np.sin(euler[0,1])*np.sin(euler[0,0]) + np.cos(euler[0,2])*np.cos(euler[0,0]))*dt
+        F515 = np.sin(euler[0,2])*np.cos(euler[0,1])*dt
+        F67 = ((-np.cos(euler[0,2])*np.sin(euler[0,1])*np.sin(euler[0,0]) + np.sin(euler[0,2])*np.cos(euler[0,0]))*ax + (np.cos(euler[0,2])*np.sin(euler[0,1])*np.cos(euler[0,0]) + np.sin(euler[0,2])*np.sin(euler[0,0]))*ay)*dt
+        F68 = (np.cos(euler[0,2])*np.cos(euler[0,1])*np.cos(euler[0,0])*ax + np.cos(euler[0,2])*np.cos(euler[0,1])*np.sin(euler[0,0])*ay - np.cos(euler[0,2])*np.sin(euler[0,1])*az)*dt
+        F69 = ((-np.sin(euler[0,2])*np.sin(euler[0,1])*np.cos(euler[0,0]) + np.cos(euler[0,2])*np.sin(euler[0,0]))*ax + (-np.sin(euler[0,2])*np.sin(euler[0,1])*np.sin(euler[0,0]) - np.cos(euler[0,2])*np.cos(euler[0,0]))*ay -np.sin(euler[0,2])*np.cos(euler[0,1])*az)*dt
+        F613 = (np.cos(euler[0,2])*np.sin(euler[0,1])*np.cos(euler[0,0]) + np.sin(euler[0,2])*np.sin(euler[0,0]))*dt
+        F614 = (np.cos(euler[0,2])*np.sin(euler[0,1])*np.sin(euler[0,0]) - np.sin(euler[0,2])*np.cos(euler[0,0]))*dt
+        F615 = np.cos(euler[0,2])*np.cos(euler[0,1])*dt
+        F78 = np.sin(euler[0,1])*(np.sin(euler[0,2])*w2 + np.cos(euler[0,2])*w3)*dt/(np.cos(euler[0,1])**2)
+        F79 = (np.cos(euler[0,2])*w2 - np.sin(euler[0,2])*w3)*np.cos(euler[0,1])*dt/(np.cos(euler[0,1])**2)
+        F711 = np.sin(euler[0,2])*dt/np.cos(euler[0,1])
+        F712 = np.cos(euler[0,2])*dt/np.cos(euler[0,1])
+        F88 = 1 + ((-np.sin(euler[0,1])*np.cos(euler[0,1])*w2 + np.sin(euler[0,1])*np.sin(euler[0,2])*w3)*np.cos(euler[0,1]) + np.sin(euler[0,1])*(np.cos(euler[0,1])*np.cos(euler[0,2])*w2 - np.cos(euler[0,1])*np.sin(euler[0,2])*w3))*dt/(np.cos(euler[0,1])**2)
+        F89 = (-np.sin(euler[0,2])*np.cos(euler[0,1])*w2 - np.cos(euler[0,1])*np.cos(euler[0,2])*w3)*np.cos(euler[0,1])*dt/(np.cos(euler[0,1])**2)
+        F811 = np.cos(euler[0,2])*dt
+        F812 = -np.sin(euler[0,2])*dt
+        F98 = ((-np.sin(euler[0,1])*w1 + np.cos(euler[0,1])*np.sin(euler[0,2])*w2 + np.cos(euler[0,1])*np.cos(euler[0,2])*w3)*np.cos(euler[0,1]) + np.sin(euler[0,1])*(np.cos(euler[0,1])*w1 + np.sin(euler[0,1])*np.sin(euler[0,2])*w2 + np.sin(euler[0,1])*np.cos(euler[0,2])*w3))*dt/(np.cos(euler[0,1])**2)
+        F99 = 1 + ((np.sin(euler[0,1])*np.cos(euler[0,2])*w2 - np.sin(euler[0,1])*np.sin(euler[0,2])*w3)*np.cos(euler[0,1]))*dt/(np.cos(euler[0,1])**2)
+        F911 = np.sin(euler[0,1])*np.sin(euler[0,2])*dt/np.cos(euler[0,1])
+        F912 = np.sin(euler[0,1])*np.cos(euler[0,2])*dt/np.cos(euler[0,1])
 
         F = np.matrix([
                         [1, 0, 0, dt, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -170,8 +266,11 @@ class sensor_fusion():
                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
         ])
 
-        return estimated_state_uav, F
-    
+        F_markers = np.matrix([[1,0,0],
+                              [0,1,0],
+                              [0,0,1]])
+
+        return estimated_state_uav, F, F_markers
     def EKF_filter(z, h, H, predicted_state_uav, F, Q, R, P):
 
         Pp= F @ P @ F.transpose() + Q
@@ -321,7 +420,6 @@ class sensor_fusion():
             #end of the loop------------------------------------------------------
         return uav_state, P_uav, state_markers, P_markers
 
-
 # ajouter def measurment pour camera ET pour markers
 
     def Start_measurement(self):
@@ -355,7 +453,7 @@ class sensor_fusion():
             imu_measurement = self.get_imu_meas
             lidar_measurement = self.get_lidar_meas
 
-            if imu_measurement !=0:  
+            if type(imu_measurement) != int:  
                 if t1-self.dt_acceptable <= imu_measurement[0][0] <= t1+self.dt_acceptable: 
                     imu_measurement = np.array([
                                                     [imu_measurement[1][0], imu_measurement[1][1], imu_measurement[1][2], imu_measurement[2][0], imu_measurement[2][1], imu_measurement[2][2], imu_measurement[3][0], imu_measurement[3][1], imu_measurement[3][2]]
@@ -363,20 +461,20 @@ class sensor_fusion():
                 else:
                     imu_measurement = 0
 
-            if lidar_measurement !=0:  
+            if type(lidar_measurement) != int:  
                 if t1-self.dt_acceptable <= lidar_measurement[1] <= t1+self.dt_acceptable: 
                     lidar_measurement = lidar_measurement[0]
                 else:
                     lidar_measurement = 0
-            if camera_top_dict != 0 :
+            if type(camera_top_dict) != int :
                 max_increment = max((increment for inner_dict in camera_top_dict.values() for increment in inner_dict), default=None)
 
                 # Trouver tous les IDs ayant la valeur maximale d'incrémentation
                 id_max = [id for id, inner_dict in camera_top_dict.items() if max_increment in inner_dict]
             else:
-                id_max = None
-
-            if id_max is not None:   
+                id_max = []
+            print(id_max)
+            if id_max != []:   
                 t = camera_top_dict[id_max[0]][max_increment][2]
 
                 if t1-self.dt_acceptable <= t <= t1+self.dt_acceptable:
@@ -386,7 +484,7 @@ class sensor_fusion():
             else:
                 camera_top_measurement = 0
             
-            if camera_below_dict != 0:
+            if type(camera_below_dict) != int:
 
                 max_increment = max((increment for inner_dict in camera_below_dict.values() for increment in inner_dict), default=None)
 
@@ -406,48 +504,48 @@ class sensor_fusion():
                 camera_below_measurement = 0
 
             #on defini les dt pour chaque cas
-            if imu_measurement != 0 and lidar_measurement != 0 and camera_below_measurement != 0 :
-                dt = dt_imu_lidar_camera
+            if type(imu_measurement) != int and lidar_measurement != 0 and camera_below_measurement != 0 :
+                dt = self.dt_imu_lidar_camera
                 situation = 1
-            elif imu_measurement != 0 and lidar_measurement != 0 and camera_below_measurement == 0:
-                dt = dt_imu_lidar 
+            elif type(imu_measurement) != int and lidar_measurement != 0 and camera_below_measurement == 0:
+                dt = self.dt_imu_lidar 
                 situation = 2
-            elif imu_measurement != 0 and lidar_measurement == 0 and camera_below_measurement != 0:  
-                dt = dt_imu_camera
+            elif type(imu_measurement) != int and lidar_measurement == 0 and camera_below_measurement != 0:  
+                dt = self.dt_imu_camera
                 situation = 3
-            elif imu_measurement == 0 and lidar_measurement != 0 and camera_below_measurement != 0:
-                dt = dt_lidar_camera
+            elif type(imu_measurement) == int and lidar_measurement != 0 and camera_below_measurement != 0:
+                dt = self.dt_lidar_camera
                 situation = 4
-            elif imu_measurement != 0 and lidar_measurement == 0 and camera_below_measurement == 0:
-                dt = dt_imu
+            elif type(imu_measurement) != int and lidar_measurement == 0 and camera_below_measurement == 0:
+                dt = self.dt_imu
                 situation = 5
-            elif imu_measurement == 0 and lidar_measurement != 0 and camera_below_measurement == 0:
-                dt= dt_lidar
+            elif type(imu_measurement) == int and lidar_measurement != 0 and camera_below_measurement == 0:
+                dt= self.dt_lidar
                 situation = 6
-            elif imu_measurement == 0 and lidar_measurement == 0 and camera_below_measurement != 0:
-                dt= dt_camera
+            elif type(imu_measurement) == int and lidar_measurement == 0 and camera_below_measurement != 0:
+                dt= self.dt_camera
                 situation = 7
             else:
+                situation = 0
                 dt=self.dt
-
 
             uav_state, F, F_markers = self.state_function(self.state_uav, dt)
 
-            if imu_measurement != 0:
+            if type(imu_measurement) != int:
 
                 h_imu, H_imu = self.imu_measurement_matrix(uav_state)
                 uav_state, P_uav = self.EKF_filter(imu_measurement,h_imu, H_imu, uav_state, F, self.Q_imu, self.R_imu, P_uav)
 
-            if lidar_measurement != 0:
+            if type(lidar_measurement) != int:
 
                 h_lidar, H_lidar = self.lidar_measurement_matrix(uav_state)
                 uav_state, P_uav = self.EKF_filter(lidar_measurement,h_lidar, H_lidar, uav_state, F, self.Q_lidar, self.R_lidar, P_uav)  
 
-            if camera_top_measurement != 0:  
+            if type(camera_top_measurement) != int:  
 
                 uav_state, P_uav, state_markers, P_markers = self.slam(id_max, max_increment, camera_top_measurement, uav_state, F, P_uav, self.Q_camera_top, state_markers, P_markers, F_markers, self.Q_markers, self.R_camera_top, self.offset_imu_camera_top, self.offset_angle_top )
 
-            if camera_below_measurement != 0:  
+            if type(camera_below_measurement) != int:  
 
                 uav_state, P_uav, state_markers, P_markers = self.slam(id_max, max_increment, camera_top_measurement, uav_state, F, P_uav, self.Q_camera_below, state_markers, P_markers, F_markers, self.Q_markers, self.R_camera_below, self.offset_imu_camera_below, self.offset_angle_below )  
 
@@ -476,7 +574,7 @@ class sensor_fusion():
                 dt_lidar = dt
             elif situation ==7:
                 dt_camera = dt
-
+            
            #!/usr/bin/env python
 
 
@@ -664,8 +762,8 @@ class sensor_fusion():
                     # Afficher le résultat
                     if last_three_increments_exist:
                         if current_id not in measurement_dict:
-                            removed_data = measurement_dict.pop(marker_id, None)  
-                        measurement_dict[current_id] = {}
+                            measurement_dict[current_id] = {}
+                        removed_data = measurement_dict.pop(marker_id, None)  
                         measurement_dict[current_id][incrementation]= new_row
                     self.get_camera_top_meas = measurement_dict
 
@@ -831,7 +929,7 @@ class sensor_fusion():
                 # z-axis points straight ahead away from your eye, out of the camera
                 n=n+1
                 for i, marker_id in enumerate(marker_ids):
-                
+                    marker_id = marker_id[0]
                     # Store the translation (i.e. position) information
                     transform_translation_x = tvecs[i][0][0]
                     transform_translation_y = tvecs[i][0][1]
@@ -862,7 +960,7 @@ class sensor_fusion():
 
                     camera_measurement = np.array([[transform_translation_x, transform_translation_y, transform_translation_z, roll_x, pitch_y, yaw_z]])
 
-                    new_row = [marker_id[0],  # ID
+                    new_row = [marker_id,  # ID
                         n,  # Numéro d'incrémentation
                         t1,  # Temps (simulé ici)
                         camera_measurement ] # Valeurs (simulées ici) converties en liste
@@ -884,8 +982,8 @@ class sensor_fusion():
                     # Afficher le résultat
                     if last_three_increments_exist:
                         if current_id not in measurement_dict:
-                            removed_data = measurement_dict.pop(marker_id, None)  
-                        measurement_dict[current_id] = {}
+                            measurement_dict[current_id] = {}
+                        removed_data = measurement_dict.pop(marker_id, None)  
                         measurement_dict[current_id][incrementation]= new_row
                     self.get_camera_below_meas = measurement_dict
 

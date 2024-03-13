@@ -1,1 +1,1 @@
-print(test is not None)
+print([]==None)

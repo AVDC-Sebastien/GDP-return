@@ -12,12 +12,12 @@ class Client:
     
     def __init__(self,host,port,new_message_size = __message_size):
         print("_"*os.get_terminal_size()[0]+"\n\033[92mgdp-return: \033[00m")
-        new_host = input("Change IP?(Y/n): ")
-        while new_host.lower() not in ("y","n"):
-            new_host = input("please type 'Y' or 'n': ")
-        if new_host.lower() == "y":
-            host = input("IP adress: ")
-            print()
+        # new_host = input("Change IP?(Y/n): ")
+        # while new_host.lower() not in ("y","n"):
+        #     new_host = input("please type 'Y' or 'n': ")
+        # if new_host.lower() == "y":
+        #     host = input("IP adress: ")
+        #     print()
         # Create a TCP socket
         self.__sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)     
         self.__server_address = (host, port)
