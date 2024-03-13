@@ -4,8 +4,9 @@ import socket
 import threading
 import logging
 import time
-from ESP32_Com import ESP32
 import numpy as np
+from Rocket_Software.ESP32.ESP32_Com import ESP32
+import Rocket_Software.Sensors.SLAM_final.Main_sensorfusion as Sensors
 
 
 HOST, PORT = '0.0.0.0', 65000
@@ -57,6 +58,14 @@ class Server:
 
         # Path
         self.Emergency_landing = False
+        
+        # Sensors
+        self.euler_offset = 0
+        self.calibration = False
+        self.calibration_done = False
+        self.euler_angle = 0
+        self.stop_sensor_fusion_thread = False
+        
 
         self.start_server()
 
@@ -223,6 +232,18 @@ class Server:
             case "stop -QTM":
                 self.stop_QTM()
             
+            # example of msg to send: "euler -offset==1,-2,3"
+            case "euler -offset":
+                self.euler_offset = np.array([float(i) for i in msg.split("==")[1].split(",")])
+                self.euler_angle += self.euler_offset
+                self.ground_station.sendall(str(self.euler_angle).encode())
+
+            case "control -calibration_done":
+                self.calibration_done = True
+
+            case "control -calibration":
+                self.ground_station.sendall(str(self.euler_angle).encode())
+
             case _:
                 if self.print_received_data and self.isGround_station_connected:
                     log_and_print(f"Message received from {self.name} : " + msg)
@@ -359,6 +380,13 @@ class Server:
             pass
         return true_position, rotation
 
+    # endregion
+
+    # region Sensors
+    def Start_sensors(self):
+        self.senors = Sensors.sensor_fusion()
+        self.senors.Start_measurement()
+        self.sensor_fusion_thread = threading.Thread(target=self.senors.main_task)
     # endregion
 
     # region ESP32
