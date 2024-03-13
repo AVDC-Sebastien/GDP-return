@@ -10,6 +10,7 @@ import board
 import adafruit_bno055
 import RPi.GPIO as GPIO
 from scipy.spatial.transform import Rotation as R
+from numpy.linalg import inv
 from time import sleep
 from picamera2 import Picamera2
 
@@ -271,22 +272,21 @@ class sensor_fusion():
                               [0,0,1]])
 
         return estimated_state_uav, F, F_markers
-    def EKF_filter(z, h, H, predicted_state_uav, F, Q, R, P):
+    def EKF_filter(self,z, h, H, predicted_state_uav, F, Q, R, P):
 
         Pp= F @ P @ F.transpose() + Q
         S = H @ Pp @ H.transpose() + R
-        K = Pp @ H.transpose()/S
+        K = (Pp @ H.transpose())*inv(S)
         residual = z.transpose() - h.transpose()
         #update
         update_state = predicted_state_uav.transpose() + K*residual
         P = Pp - K @ S @ K.transpose()
 
         return update_state, P
-    def imu_measurement_matrix(estimated_state_uav):
-
+    def imu_measurement_matrix(self,estimated_state_uav):
 
         h = np.array([
-                        [estimated_state_uav[6], estimated_state_uav[7], estimated_state_uav[8], estimated_state_uav[9], estimated_state_uav[10], estimated_state_uav[11], estimated_state_uav[12], estimated_state_uav[13], estimated_state_uav[14] ]
+                        [estimated_state_uav[0,6], estimated_state_uav[0,7], estimated_state_uav[0,8], estimated_state_uav[0,9], estimated_state_uav[0,10], estimated_state_uav[0,11], estimated_state_uav[0,12], estimated_state_uav[0,13], estimated_state_uav[0,14] ]
                         ])
         H = np.array([
                         [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -301,7 +301,7 @@ class sensor_fusion():
                     ])
 
         return h, H
-    def lidar_measurement_matrix(estimated_state_uav):
+    def lidar_measurement_matrix(self,estimated_state_uav):
         x_z = estimated_state_uav[2]
         pitch = np.radians(estimated_state_uav[7])
         roll = np.radians(estimated_state_uav[8])
@@ -316,7 +316,7 @@ class sensor_fusion():
 
         return h, H
 
-    def camera_markers_measurement(state_uav, state_markers, offset, offset_angle) :
+    def camera_markers_measurement(self,state_uav, state_markers, offset, offset_angle) :
         yaw = state_uav[6]
         pitch = state_uav[7]
         roll = state_uav[8]
@@ -442,12 +442,9 @@ class sensor_fusion():
 
 # Tâche Principale
     def main_task(self):
+        P_uav = self.P_uav
         while not self.stop_main_sensor_thread:
             t1 = time.time()
-            print("top",self.get_camera_top_meas)
-            print("bot",self.get_camera_below_meas)
-            print("imu",self.get_imu_meas)
-            print("lidar",self.get_lidar_meas)
             camera_top_dict = self.get_camera_top_meas
             camera_below_dict = self.get_camera_below_meas
             imu_measurement = self.get_imu_meas
@@ -473,7 +470,7 @@ class sensor_fusion():
                 id_max = [id for id, inner_dict in camera_top_dict.items() if max_increment in inner_dict]
             else:
                 id_max = []
-            print(id_max)
+                
             if id_max != []:   
                 t = camera_top_dict[id_max[0]][max_increment][2]
 
@@ -491,9 +488,9 @@ class sensor_fusion():
                 # Trouver tous les IDs ayant la valeur maximale d'incrémentation
                 id_max = [id for id, inner_dict in camera_below_dict.items() if max_increment in inner_dict]
             else:
-                id_max = None
-            
-            if id_max is not None:   
+                id_max = []
+
+            if id_max != []:   
                 t = camera_below_dict[id_max[0]][max_increment][2]
 
                 if t1-self.dt_acceptable <= t <= t1+self.dt_acceptable:
