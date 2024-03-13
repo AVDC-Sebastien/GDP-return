@@ -7,7 +7,7 @@ This program:
   - Estimates the pose of an ArUco Marker
 '''
   
-from __future__ import print_function # Python 2/3 compatibility
+
 import cv2 # Import the OpenCV library
 import numpy as np # Import Numpy library
 from scipy.spatial.transform import Rotation as R

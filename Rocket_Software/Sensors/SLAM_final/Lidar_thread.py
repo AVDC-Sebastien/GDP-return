@@ -2,22 +2,22 @@ import RPi.GPIO as GPIO
 import time
 import numpy as np
 
-GPIO.setmode(GPIO.BCM)
-
-# print "+-----------------------------------------------------------+"
-# print "|   Mesure de distance par le capteur ultrasonore HC-SR04   |"
-# print "+-----------------------------------------------------------+"
-
-Trig = 23          # Entree Trig du HC-SR04 branchee au GPIO 23
-Echo = 24         # Sortie Echo du HC-SR04 branchee au GPIO 24
-
-GPIO.setup(Trig,GPIO.OUT)
-GPIO.setup(Echo,GPIO.IN)
-
-GPIO.output(Trig, False)
-
 # repet = input("Entrez un nombre de repetitions de mesure : ")
 def lidar_task(get_lidar_meas):
+
+  GPIO.setmode(GPIO.BCM)
+
+  # print "+-----------------------------------------------------------+"
+  # print "|   Mesure de distance par le capteur ultrasonore HC-SR04   |"
+  # print "+-----------------------------------------------------------+"
+
+  Trig = 23          # Entree Trig du HC-SR04 branchee au GPIO 23
+  Echo = 24         # Sortie Echo du HC-SR04 branchee au GPIO 24
+
+  GPIO.setup(Trig,GPIO.OUT)
+  GPIO.setup(Echo,GPIO.IN)
+
+  GPIO.output(Trig, False)
   while True:
 
     GPIO.output(Trig, True)
@@ -37,4 +37,4 @@ def lidar_task(get_lidar_meas):
                               ])
     #print ("La distance est de : ",distance," cm, mesure:",x)
 
-GPIO.cleanup()
+  GPIO.cleanup()

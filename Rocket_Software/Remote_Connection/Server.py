@@ -6,7 +6,7 @@ import logging
 import time
 import numpy as np
 from Rocket_Software.ESP32.ESP32_Com import ESP32
-import Rocket_Software.Sensors.SLAM_final.Main_sensorfusion as Sensors
+import Rocket_Software.Sensors.SLAM_final.Sensor_fusion as Sensors
 
 
 HOST, PORT = '0.0.0.0', 65000
@@ -231,7 +231,10 @@ class Server:
             
             case "stop -QTM":
                 self.stop_QTM()
-            
+            case "start -Sensors":
+                self.Start_sensors()
+            case "stop -Sensors":
+                self.Stop_sensors()
             # example of msg to send: "euler -offset==1,-2,3"
             case "euler -offset":
                 self.euler_offset = np.array([float(i) for i in msg.split("==")[1].split(",")])
@@ -265,11 +268,12 @@ class Server:
             if not self.isServeropen:
                 log_and_print("Shutting down the server",Server.WARNING)
                 if self.isGround_station_connected:
-                    self.stop_QTM()
                     self.stop_sending()
                     self.stop_receiving()
+                if self.__isQTM_connected:
+                    self.stop_QTM()
                 else:
-                    socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(HOST,PORT)
+                    socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect((HOST,PORT))
                 self.__sock.shutdown(socket.SHUT_RDWR)
                 self.__sock.close()
                 self.isServerrunning = False
@@ -387,6 +391,9 @@ class Server:
         self.senors = Sensors.sensor_fusion()
         self.senors.Start_measurement()
         self.sensor_fusion_thread = threading.Thread(target=self.senors.main_task)
+        time.sleep(5)
+        self.sensor_fusion_thread.start()
+        print_with_colors("Started",Server.GREEN)
     
     def Stop_sensors(self):
         self.senors.Stop_measurement() 
