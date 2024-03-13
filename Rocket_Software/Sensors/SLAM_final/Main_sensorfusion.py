@@ -327,6 +327,7 @@ class sensor_fusion():
 
     def Stop_measurement(self):
         self.stop_measurement_thread = True
+        self.stop_main_sensor_thread = True
         self.imu_thread.join()
         self.camera_top_thread.join()
         self.camera_below_thread.join()
@@ -334,7 +335,7 @@ class sensor_fusion():
 
 # Tâche Principale
     def main_task(self):
-        while self.stop_main_sensor_thread:
+        while not self.stop_main_sensor_thread:
 
             t1 = time.time()
             camera_top_dict = self.get_camera_top_meas

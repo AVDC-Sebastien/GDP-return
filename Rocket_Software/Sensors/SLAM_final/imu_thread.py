@@ -33,29 +33,11 @@ def imu_task(get_imu_meas, target_angle_offset,stop):
     #     return result
 
 
-    while stop:
-        # Structure de données partagée
-
-        # print("Temperature: {} degrees C".format(sensor.temperature))
-        # """
-        # print(
-        #     "Temperature: {} degrees C".format(temperature())
-        # )  # Uncomment if using a Raspberry Pi
-        # """
-        # print("Accelerometer (m/s^2): {}".format(sensor.acceleration))
-        # print("Magnetometer (microteslas): {}".format(sensor.magnetic))
-        # print("Gyroscope (rad/sec): {}".format(sensor.gyro))
-        # print("Euler angle: {}".format(sensor.euler))
-        
-        # print("Quaternion: {}".format(sensor.quaternion))
-        # print("Linear acceleration (m/s^2): {}".format(sensor.linear_acceleration))
-        # print("Gravity (m/s^2): {}".format(sensor.gravity))
-        # print()
+    while not stop:
         t = time.time()
         sensor_euler = sensor.euler
         angular_rate =sensor.gyro
         acceleration = sensor.linear_acceleration
-        print(f"Euler angle: {sensor_euler}")
         # Adjust the Euler angle values with the target_angle_offset
         heading, roll, pitch = [position - target_angle_offset[idx] for idx, position in enumerate(sensor_euler)]
         euler = np.array([[heading, roll, pitch]])

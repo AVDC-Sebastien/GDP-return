@@ -387,8 +387,11 @@ class Server:
         self.senors = Sensors.sensor_fusion()
         self.senors.Start_measurement()
         self.sensor_fusion_thread = threading.Thread(target=self.senors.main_task)
+    
+    def Stop_sensors(self):
+        self.senors.Stop_measurement() 
+        self.sensor_fusion_thread.join()
     # endregion
-
     # region ESP32
     def Start_ESP32(self):
         self.ESP32_com_thread = threading.Thread(target=self.ESP32.Start_sending,args=[self.ESP32_data])

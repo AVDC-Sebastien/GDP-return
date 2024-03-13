@@ -83,7 +83,7 @@ def camera_top_task(get_camera_top_meas,stop):
   """
   # Check that we have a valid ArUco marker
   if ARUCO_DICT.get(aruco_dictionary_name, None) is None:
-    logging.info("[INFO] ArUCo tag is not supported")
+    logging.info("ArUCo tag is not supported")
     
 
   # Load the camera parameters from the saved file
@@ -93,10 +93,9 @@ def camera_top_task(get_camera_top_meas,stop):
   dst = cv_file.getNode('D').mat()
   cv_file.release()
 
-  # print(mtx)
-  # print(dst)   
+
   # Load the ArUco dictionary
-  print("[INFO] detecting '{}' markers...".format(
+  logging.info("Detecting '{}' markers...".format(
     aruco_dictionary_name))
   # this_aruco_dictionary = cv2.aruco.Dictionary_get(ARUCO_DICT[aruco_dictionary_name])
   # this_aruco_parameters = cv2.aruco.DetectorParameters_create()
@@ -112,7 +111,7 @@ def camera_top_task(get_camera_top_meas,stop):
   data_dict = {}
   measurement_dict = {}
   
-  while(stop):
+  while(not stop):
   
     # Capture frame-by-frame
     # This method returns True/False as well

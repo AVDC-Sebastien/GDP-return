@@ -13,17 +13,16 @@ import numpy as np # Import Numpy library
 from scipy.spatial.transform import Rotation as R
 import math # Math library
 from time import sleep
-from picamera2 import Picamera2, Preview
-from io import BytesIO
+from picamera2 import Picamera2
 import time
- 
+import logging
 # Project: ArUco Marker Pose Estimator
 # Date created: 12/21/2021
 # Python version: 3.8
 # Structure de données partagée
 
 
-def camera_below_task(get_camera_below_meas):
+def camera_below_task(get_camera_below_meas,stop):
 
 # Dictionary that was used to generate the ArUco marker
   aruco_dictionary_name = "DICT_ARUCO_ORIGINAL"
@@ -81,12 +80,8 @@ def camera_below_task(get_camera_below_meas):
   """
   Main method of the program.
   """
-  # Check that we have a valid ArUco marker
   if ARUCO_DICT.get(aruco_dictionary_name, None) is None:
-    print("[INFO] ArUCo tag of '{}' is not supported".format(
-      args["type"]))
-    sys.exit(0)
-
+    logging.info("[INFO] ArUCo tag is not supported")
   # Load the camera parameters from the saved file
   cv_file = cv2.FileStorage(
     camera_calibration_parameters_filename, cv2.FILE_STORAGE_READ) 
@@ -97,8 +92,7 @@ def camera_below_task(get_camera_below_meas):
   # print(mtx)
   # print(dst)   
   # Load the ArUco dictionary
-  print("[INFO] detecting '{}' markers...".format(
-    aruco_dictionary_name))
+  logging.info("Detecting '{}' markers...".format(aruco_dictionary_name))
   # this_aruco_dictionary = cv2.aruco.Dictionary_get(ARUCO_DICT[aruco_dictionary_name])
   # this_aruco_parameters = cv2.aruco.DetectorParameters_create()
   this_aruco_dictionary = cv2.aruco.getPredefinedDictionary(ARUCO_DICT[aruco_dictionary_name])
@@ -113,7 +107,7 @@ def camera_below_task(get_camera_below_meas):
   data_dict = {}
   measurement_dict = {}
   
-  while(True):
+  while(not stop):
   
     # Capture frame-by-frame
     # This method returns True/False as well
