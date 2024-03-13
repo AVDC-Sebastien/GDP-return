@@ -31,10 +31,11 @@ def lidar_task(get_lidar_meas):
       finImpulsion = time.time()
 
     distance = round((finImpulsion - debutImpulsion) * 340 * 100 / 2, 1)  ## Vitesse du son = 340 m/s
-    get_lidar_meas = np.array([
-                              [distance*100],
-                              [t1]
-                              ])
+    if distance is not None:
+      get_lidar_meas = np.array([
+                                [distance*100],
+                                [t1]
+                                ])
     #print ("La distance est de : ",distance," cm, mesure:",x)
 
 GPIO.cleanup()
