@@ -9,6 +9,7 @@ import numpy as np
 # SPDX-License-Identifier: MIT
 
 
+
 def imu_task(get_imu_meas, target_angle_offset,stop):
 
     i2c = board.I2C()  # uses board.SCL and board.SDA  attention c'est celui la que j'ai commente
