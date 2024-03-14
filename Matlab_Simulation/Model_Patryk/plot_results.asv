@@ -1,0 +1,18 @@
+data = sin_slow;
+
+bias_throttle = 0.031225;
+bias_torque = -0.056332;
+
+thrust_scale = ();
+
+% Remove bias
+data(:, 3) = data(:, 3) - bias_torque;
+data(:, 4) = data(:, 4) - bias_throttle;
+
+%Convert throttle to 0..1 range
+data(:, 2) = data(:, 2) - 1000;
+data(:, 2) = data(:, 2)./1000;
+
+% Scale thrust
+
+plot(data, "Time_s_", ["ESCSignal__s_", "Thrust_kgf_", "Torque_N_m_"]);

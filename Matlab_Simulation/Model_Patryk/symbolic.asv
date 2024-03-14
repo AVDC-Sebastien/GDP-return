@@ -9,6 +9,7 @@ syms F_d F_dx F_dy F_dz % Force Drag Body
 syms Vb Vbx Vby Vbz     % Velocity Body
 syms C_d A              % Drag Coeff, Area
 syms Phi Theta Psi      % Roll, Pitch, Yaw
+syms Phi_dot Theta_dot Psi_dot  % Roll, Pitch, Yaw Rate
 syms m g                % Mass
 syms T Mz tvc_roll tvc_pitch    % Thrust, Yaw Propulsion Torque
 syms CTPosx CTPosy CTPosz % Centre of thrust position
@@ -17,7 +18,10 @@ syms d_T d_yaw d_roll d_pitch   % Commands: Throttle, Yaw, TVC Roll TVC Pitch
 syms Ixx Iyy Izz        % Moment of inertia
 
 %% Actuator Model !!!TODO!!!
-
+T = d_T * 22.4 * 4;
+Mz = d_yaw * 0.2 * 0.075;
+tvc_roll = d_roll;
+tvc_pitch = d_pitch;
 
 %% Aero Model
 Vb_xy_len = sqrt(Vbx^2 + Vby^2);
@@ -36,8 +40,8 @@ F_az = F_dz;
 %% Gravity Model
 F_gez = g * m; % Force of Gravity - Earth
 F_gx = (cos(Psi)*sin(Theta)*cos(Phi) + sin(Psi)*sin(Phi)) * F_gez;
-F_gy = (cos(Psi)*sin(Theta)*sin(Phi) - sin(Psi)*cos(Phi)) * F_gez;
-F_gz = (cos(Psi)*cos(Theta)) * F_gez;
+F_gy = (sin(Psi)*sin(Theta)*cos(Phi) - cos(Psi)*sin(Phi)) * F_gez;
+F_gz = (cos(Theta)*cos(Phi)) * F_gez;
 
 %% Propulsion Model
 Tdirx = (cos(0)*sin(tvc_pitch)*cos(tvc_roll) + sin(0)*sin(tvc_roll)) * -1;
@@ -68,17 +72,26 @@ M_ty = M_py;
 M_tz = M_pz;
 
 %% Equations of Motion
-syms Vbx_dot Vby_dot Vbz_dot; % u_dot, v_dot, w_dot
+syms u v w u_dot v_dot w_dot; % u_dot, v_dot, w_dot
 syms p q r p_dot q_dot r_dot;
 syms x y z x_dot y_dot z_dot;
 
-x_dot = 
+x_dot = cos(Theta)*cos(Psi)*u + cos(Theta)*sin(Psi)*v - sin(Theta)*w;
+y_dot = (sin(Phi)*sin(Theta)*cos(Psi) - cos(Phi)*sin(Psi))*u + (sin(Phi)*sin(Theta)*sin(Psi) + cos(Phi)*cos(Psi))*v + sin(Phi)*cos(Theta)*w;
+z_dot = (cos(Phi)*sin(Theta)*cos(Psi) + sin(Phi)*sin(Psi))*u + (cos(Phi)*sin(Theta)*sin(Psi) - sin(Phi)*cos(Psi))*v + cos(Phi)*cos(Theta)*w;
 
-Vbx_dot = F_tx / m; % u
-Vby_dot = F_ty / m; % v
-Vbz_dot = F_tz / m; % w
+u_dot = F_tx / m;
+v_dot = F_ty / m;
+w_dot = F_tz / m;
 
 p_dot = M_tx / Ixx; % p
 q_dot = M_ty / Iyy; % q
 r_dot = M_tz / Izz; % r
 
+%Phi_dot = cos(Theta)*cos(Psi)*p + cos(Theta)*sin(Psi)*q - sin(Theta)*r;
+%Theta_dot = (sin(Phi)*sin(Theta)*cos(Psi) - cos(Phi)*sin(Psi))*p + (sin(Phi)*sin(Theta)*sin(Psi) + cos(Phi)*cos(Psi))*q + sin(Phi)*cos(Theta)*r;
+%Psi_dot = (cos(Phi)*sin(Theta)*cos(Psi) + sin(Phi)*sin(Psi))*p + (cos(Phi)*sin(Theta)*sin(Psi) - sin(Phi)*cos(Psi))*q + cos(Phi)*cos(Theta)*r;
+
+Phi_dot = cos(Theta)*cos(Psi)*p + cos(Theta)*sin(Psi)*q - sin(Theta)*r;
+Theta_dot = (sin(Phi)*sin(Theta)*cos(Psi) - cos(Phi)*sin(Psi))*p + (sin(Phi)*sin(Theta)*sin(Psi) + cos(Phi)*cos(Psi))*q + sin(Phi)*cos(Theta)*r;
+Psi_dot = (cos(Phi)*sin(Theta)*cos(Psi) + sin(Phi)*sin(Psi))*p + (cos(Phi)*sin(Theta)*sin(Psi) - sin(Phi)*cos(Psi))*q;

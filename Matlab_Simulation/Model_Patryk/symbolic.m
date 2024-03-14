@@ -88,7 +88,10 @@ p_dot = M_tx / Ixx; % p
 q_dot = M_ty / Iyy; % q
 r_dot = M_tz / Izz; % r
 
-Phi_dot = cos(Theta)*cos(Psi)*p + cos(Theta)*sin(Psi)*q - sin(Theta)*r;
-Theta_dot = (sin(Phi)*sin(Theta)*cos(Psi) - cos(Phi)*sin(Psi))*p + (sin(Phi)*sin(Theta)*sin(Psi) + cos(Phi)*cos(Psi))*q + sin(Phi)*cos(Theta)*r;
-Psi_dot = (cos(Phi)*sin(Theta)*cos(Psi) + sin(Phi)*sin(Psi))*p + (cos(Phi)*sin(Theta)*sin(Psi) - sin(Phi)*cos(Psi))*q + cos(Phi)*cos(Theta)*r;
+%Phi_dot = cos(Theta)*cos(Psi)*p + cos(Theta)*sin(Psi)*q - sin(Theta)*r;
+%Theta_dot = (sin(Phi)*sin(Theta)*cos(Psi) - cos(Phi)*sin(Psi))*p + (sin(Phi)*sin(Theta)*sin(Psi) + cos(Phi)*cos(Psi))*q + sin(Phi)*cos(Theta)*r;
+%Psi_dot = (cos(Phi)*sin(Theta)*cos(Psi) + sin(Phi)*sin(Psi))*p + (cos(Phi)*sin(Theta)*sin(Psi) - sin(Phi)*cos(Psi))*q + cos(Phi)*cos(Theta)*r;
 
+Phi_dot = cos(Phi)*sin(Theta)*p + sin(Phi)*sin(Theta)*q + cos(Theta)*r;
+Theta_dot = -sin(Phi)*cos(Theta)*p + cos(Phi)*cos(Theta)*q;
+Psi_dot = cos(Phi)*p + sin(Phi)*q;
