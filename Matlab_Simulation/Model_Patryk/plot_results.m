@@ -1,4 +1,4 @@
-data = sin_data;
+data = step_data;
 
 bias_thrust = -0.0113;
 bias_torque = 0.0018;
