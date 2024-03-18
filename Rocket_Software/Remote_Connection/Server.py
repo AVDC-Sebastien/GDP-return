@@ -4,6 +4,8 @@ import socket
 import threading
 import logging
 import time
+import board
+import adafruit_bno055
 import numpy as np
 from Rocket_Software.ESP32.ESP32_Com import ESP32
 import Rocket_Software.Sensors.SLAM_final.Sensor_fusion as Sensors
@@ -65,7 +67,14 @@ class Server:
         self.calibration_done = False
         self.euler_angle = 0
         self.stop_sensor_fusion_thread = False
-        
+        self.sensor_offset : str
+        self.sensor_offset_done = False
+        self.sensor_yaw_offset = False
+        self.sensor_roll_offset = False
+        self.sensor_pitch_offset = False
+        self.sensor_offset_satisfied = False
+
+        self.target_angle_offset = (0,0,0)
 
         self.start_server()
 
@@ -232,10 +241,28 @@ class Server:
             
             case "stop -QTM":
                 self.stop_QTM()
+
             case "start -Sensors":
                 self.Start_sensors()
             case "stop -Sensors":
                 self.Stop_sensors()
+            case "input -sensors_offset":
+                if msg.split("==")[1] == 'y':
+                    self.sensor_offset_done = True   
+                    self.sensor_offset = 'y'
+                else:
+                    self.sensor_offset = 'n'
+                    self.sensor_offset_done = False
+
+            case "input -sensors_roll_offset":
+                self.sensor_roll_offset = float(msg.split("==")[1])
+            case "input -sensors_yaw_offset":
+                self.sensor_yaw_offset = float(msg.split("==")[1])
+            case "input -sensors_pitch_offset":
+                self.sensor_pitch_offset = float(msg.split("==")[1])
+            case "input -sensors_satisfied":
+                self.sensor_offset_satisfied = True
+
             # example of msg to send: "euler -offset==1,-2,3"
             case "euler -offset":
                 self.euler_offset = np.array([float(i) for i in msg.split("==")[1].split(",")])
@@ -389,7 +416,7 @@ class Server:
 
     # region Sensors
     def Start_sensors(self):
-        self.senors = Sensors.sensor_fusion()
+        self.senors = Sensors.sensor_fusion(self.target_angle_offset)
         self.senors.Start_measurement()
         self.sensor_fusion_thread = threading.Thread(target=self.senors.main_task)
         time.sleep(5)
@@ -399,6 +426,112 @@ class Server:
     def Stop_sensors(self):
         self.senors.Stop_measurement() 
         self.sensor_fusion_thread.join()
+    def imu_calibration(self,client:socket.socket):
+
+    
+        # pylint: disable=too-few-public-methods
+        class Mode:
+            CONFIG_MODE = 0x00
+            ACCONLY_MODE = 0x01
+            MAGONLY_MODE = 0x02
+            GYRONLY_MODE = 0x03
+            ACCMAG_MODE = 0x04
+            ACCGYRO_MODE = 0x05
+            MAGGYRO_MODE = 0x06
+            AMG_MODE = 0x07
+            IMUPLUS_MODE = 0x08
+            COMPASS_MODE = 0x09
+            M4G_MODE = 0x0A
+            NDOF_FMC_OFF_MODE = 0x0B
+            NDOF_MODE = 0x0C
+
+
+        # Uncomment these lines for UART interface connection
+        # uart = board.UART()
+        # sensor = adafruit_bno055.BNO055_UART(uart)
+
+        # Instantiate I2C interface connection
+        # i2c = board.I2C()  # For board.SCL and board.SDA
+        i2c = board.I2C()  # uses board.SCL and board.SDA  attention c'est celui la que j'ai commente
+        # i2c = board.STEMMA_I2C()  # For using the built-in STEMMA QT connector on a microcontroller
+        sensor = adafruit_bno055.BNO055_I2C(i2c)
+        sensor.mode = Mode.NDOF_MODE  # Set the sensor to NDOF_MODE
+        client.sendall(str("ping").encode())
+        self.print_client("Magnetometer: Perform the figure-eight calibration dance.")
+        while not sensor.calibration_status[3] == 3:
+            # Calibration Dance Step One: Magnetometer
+            #   Move sensor away from magnetic interference or shields
+            #   Perform the figure-eight until calibrated
+            self.print_client(f"Mag Calib Status: {100 / 3 * sensor.calibration_status[3]:3.0f}%")
+            time.sleep(1)
+        self.print_client("... CALIBRATED")
+        time.sleep(1)
+
+        self.print_client("Accelerometer: Perform the six-step calibration dance.")
+        while not sensor.calibration_status[2] == 3:
+            # Calibration Dance Step Two: Accelerometer
+            #   Place sensor board into six stable positions for a few seconds each:
+            #    1) x-axis right, y-axis up,    z-axis away
+            #    2) x-axis up,    y-axis left,  z-axis away
+            #    3) x-axis left,  y-axis down,  z-axis away
+            #    4) x-axis down,  y-axis right, z-axis away
+            #    5) x-axis left,  y-axis right, z-axis up
+            #    6) x-axis right, y-axis left,  z-axis down
+            #   Repeat the steps until calibrated
+            self.print_client(f"Accel Calib Status: {100 / 3 * sensor.calibration_status[2]:3.0f}%")
+            time.sleep(1)
+        self.print_client("... CALIBRATED")
+        time.sleep(1)
+
+        self.print_client("Gyroscope: Perform the hold-in-place calibration dance.")
+        while not sensor.calibration_status[1] == 3:
+            # Calibration Dance Step Three: Gyroscope
+            #  Place sensor in any stable position for a few seconds
+            #  (Accelerometer calibration may also calibrate the gyro)
+            self.print_client(f"Gyro Calib Status: {100 / 3 * sensor.calibration_status[1]:3.0f}%")
+            time.sleep(1)
+        self.print_client("... CALIBRATED")
+        time.sleep(1)
+
+        self.print_client("\nCALIBRATION COMPLETED")
+        self.print_client("Insert these preset offset values into project code:")
+        self.print_client(f"  Offsets_Magnetometer:  {sensor.offsets_magnetometer}")
+        self.print_client(f"  Offsets_Gyroscope:     {sensor.offsets_gyroscope}")
+        self.print_client(f"  Offsets_Accelerometer: {sensor.offsets_accelerometer}")
+
+        self.print_client("input -sensors_offset==Do you want to set an offset for the imu? ? (y/n) : ")
+        while not self.sensor_offset_done:
+            pass    
+        if self.sensor_offset == 'y':
+            temps_debut = time.time()
+            satisfaction = "n"
+
+            # Exécuter la tâche pendant 10 secondes
+            while (time.time() - temps_debut) < 10:
+                self.print_client("Euler angle: {}".format(sensor.euler))
+
+            while satisfaction == "n":
+                self.print_client("input -sensors_yaw==give the wanted yaw offset : ")
+                self.print_client("input -sensors_pitch==give the wanted pitch offset : ")
+                self.print_client("input -sensors_roll==give the wanted roll offset : ")
+                yaw = self.sensor_yaw_offset
+                pitch = self.sensor_pitch_offset
+                roll = self.sensor_roll_offset
+                target_angle_offset = (yaw, pitch, roll)
+                while (time.time() - temps_debut) < 10:
+                    self.print_client("Euler angle: {}".format(sensor.euler))
+
+                self.print_client("input -sensors_satisfied==are you satisfied of the offset? ? (y/n) : ")
+            
+                if self.sensor_offset_satisfied == "y":
+                    satisfaction = "y"
+                    self.Start_sensors()
+    
+        elif self.sensor_offset == "n":
+            self.target_angle_offset = (0, 0, 0)
+            self.Start_sensors()
+
+    
     # endregion
     # region ESP32
     def Start_ESP32(self):
@@ -412,6 +545,8 @@ class Server:
         self.ESP32_com_thread.join()
         log_and_print(f"Stopped sending data to ESP32 from {self.port}...",Server.GREEN)
     # endregion
+    def print_client(self,msg):
+        self.ground_station.sendall(str(msg).encode())
 
 def log_and_print(txt: str, level: int = Server.INFO):
     print_with_colors(txt,level)

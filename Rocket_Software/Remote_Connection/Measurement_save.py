@@ -35,16 +35,16 @@ class save_tuning_data:
     def save_all(self, folder_path : str = "Rocket_Software\saved_measurement"): 
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
-        np.save(folder_path + "\Qualisys_data.csv",self.Qualisys)
-        np.save(folder_path + "\Camera_data.csv",self.Camera)
-        np.save(folder_path + "\Lidar_data.csv",self.Lidar)
-        np.save(folder_path + "\imu_data.csv",self.imu)
+        np.savetxt(folder_path + "\Qualisys_data.csv",self.Qualisys,delimiter=",")
+        np.save(folder_path + "\Camera_data.csv",self.Camera,delimiter=",")
+        np.save(folder_path + "\Lidar_data.csv",self.Lidar,delimiter=",")
+        np.save(folder_path + "\imu_data.csv",self.imu,delimiter=",")
 
-    def load_all(self, folder_path):
-            self.Qualisys = np.load(folder_path + "\Qualisys_data.csv",allow_pickle=True)
-            self.Camera = np.load(folder_path + "\Camera_data.csv",allow_pickle=True)
-            self.Lidar = np.load(folder_path + "\Lidar_data.csv",allow_pickle=True)
-            self.imu = np.load(folder_path + "\imu_data.csv",allow_pickle=True)
+    # def load_all(self, folder_path):
+    #         self.Qualisys = np.load(folder_path + "\Qualisys_data.csv",allow_pickle=True)
+    #         self.Camera = np.load(folder_path + "\Camera_data.csv",allow_pickle=True)
+    #         self.Lidar = np.load(folder_path + "\Lidar_data.csv",allow_pickle=True)
+    #         self.imu = np.load(folder_path + "\imu_data.csv",allow_pickle=True)
 
 
     def __str__(self) -> str:

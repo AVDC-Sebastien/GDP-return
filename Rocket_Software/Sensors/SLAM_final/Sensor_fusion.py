@@ -17,7 +17,7 @@ from picamera2 import Picamera2
 
 class sensor_fusion():
 
-    def __init__(self):
+    def __init__(self,target_angle_offset):
         self.stop_main_sensor_thread = False
         self.stop_measurement_thread = False
 
@@ -167,7 +167,7 @@ class sensor_fusion():
         self.offset_angle_below = 180
         self.offset_lidar = []
 
-        self.target_angle_offset = (0,0,0)
+        self.target_angle_offset = target_angle_offset
 
         self.calibration_faite = 0
 

@@ -198,14 +198,13 @@ class Client:
             while (not self.__needs_to_stop_receiving) and self.__isClientrunning:
                 data = self.__sock.recv(self.__message_size).decode()
                 self.execute_message(data)
-                if self.print_received_data:
-                    print(data)
+            
         except:
                 if not self.__needs_to_stop_receiving:
                     print("Error in receiving a message")
 #endregion
-    def execute_message(self,msg):
-        match msg:
+    def execute_message(self,msg : str):
+        match msg.split("==")[0]:
             case "stop":
                 self.stop_sending()
 
@@ -221,6 +220,16 @@ class Client:
                 print("receiving time : " + str(self.t) +"ms")
                 self.__sending_time[-1] = self.t
 
+            case "input -sensors_offset":
+                input_sensor = input(msg.split("==")[1]).lower()
+                while input_sensor not in ('y','n'):
+                    input_sensor = input("Please answer by 'y' or 'n': ").lower()
+                if input_sensor == 'y':
+                    self.__sock.sendall(str("input -sensors_offset==y").encode())
+                else:
+                    self.__sock.sendall(str("input -sensors_offset==n").encode())
+            case _:
+                print(msg)
 
 def print_with_colors(txt,txt_type):
     if txt_type == "Error":
