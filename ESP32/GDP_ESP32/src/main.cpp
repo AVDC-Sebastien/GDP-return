@@ -71,11 +71,15 @@ void setup() {
   initServoLib();
   // Prime ESCs
   primeESCs();
+  // Setup PIDs
+  setupPID();
 }
 
 void loop() {
 
+  // Control Loop
   controlLoop();
+  
 }
 
 // Clamp value
@@ -123,8 +127,20 @@ void controlLoop() {
 
   // Wait to maintain 50 Hz
   while (micros() < lastControlMicros + 20000);
+  lastControlMicros = micros();
 
+  rollRatePID.Compute();
+  rollPID.Compute();
 
+  pitchRatePID.Compute();
+  pitchPID.Compute();
+
+  yawRatePID.Compute();
+  yawPID.Compute();
+
+  accZPID.Compute();
+  velZPID.Compute();
+  posZPID.Compute();
 
 }
 
