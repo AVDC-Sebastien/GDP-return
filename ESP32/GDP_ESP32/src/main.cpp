@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <ESP32Servo.h>
 #include <cmath>
+#include <QuickPID.h>
 
 // Config - EDF Pins
 #define EDF_N_PIN 1
@@ -20,18 +21,47 @@ Servo EDFE;
 Servo PitchServo;
 Servo RollServo;
 
-float test = -.5f;
-ulong curtime = 0;
+// Last control loop time
+ulong lastControlMicros = micros();
+
+// Control variables
+float roll = 0.f, rollRate = 0.f;
+float rollSetpoint = 0.f, rollRateSetpoint = 0.f;
+
+float pitch = 0.f, pitchRate = 0.f;
+float pitchSetpoint = 0.f, pitchRateSetpoint = 0.f;
+
+float yaw = 0.f, yawRate = 0.f;
+float yawSetpoint = 0.f, yawRateSetpoint = 0.f;
+
+float posZ = 0.f, velZ = 0.f, accZ = 0.f;
+float posZSetpoint = 0.f, velZSetpoint = 0.f, accZSetpoint = 0.f;
+
+// Control cmds
+float cmdT = 0.f, cmdRoll = 0.f, cmdPitch = 0.f, cmdYaw = 0.f;
+
+// PIDs
+QuickPID rollRatePID(&rollRate, &cmdRoll, &rollRateSetpoint, 1.f, 1.f, 1.f, QuickPID::pMode::pOnError, QuickPID::dMode::dOnMeas, QuickPID::iAwMode::iAwClamp, QuickPID::Action::direct);
+QuickPID rollPID(&roll, &rollRateSetpoint, &rollSetpoint, 1.f, 1.f, 1.f, QuickPID::pMode::pOnError, QuickPID::dMode::dOnMeas, QuickPID::iAwMode::iAwClamp, QuickPID::Action::direct);
+
+QuickPID pitchRatePID(&pitchRate, &cmdPitch, &pitchRateSetpoint, 1.f, 1.f, 1.f, QuickPID::pMode::pOnError, QuickPID::dMode::dOnMeas, QuickPID::iAwMode::iAwClamp, QuickPID::Action::direct);
+QuickPID pitchPID(&pitch, &pitchRateSetpoint, &pitchSetpoint, 1.f, 1.f, 1.f, QuickPID::pMode::pOnError, QuickPID::dMode::dOnMeas, QuickPID::iAwMode::iAwClamp, QuickPID::Action::direct);
+
+QuickPID yawRatePID(&yawRate, &cmdYaw, &yawRateSetpoint, 1.f, 1.f, 1.f, QuickPID::pMode::pOnError, QuickPID::dMode::dOnMeas, QuickPID::iAwMode::iAwClamp, QuickPID::Action::direct);
+QuickPID yawPID(&yaw, &yawRateSetpoint, &yawSetpoint, 1.f, 1.f, 1.f, QuickPID::pMode::pOnError, QuickPID::dMode::dOnMeas, QuickPID::iAwMode::iAwClamp, QuickPID::Action::direct);
+
+QuickPID accZPID(&accZ, &cmdT, &accZSetpoint, 1.f, 1.f, 1.f, QuickPID::pMode::pOnError, QuickPID::dMode::dOnMeas, QuickPID::iAwMode::iAwClamp, QuickPID::Action::direct);
+QuickPID velZPID(&velZ, &accZSetpoint, &velZSetpoint, 1.f, 1.f, 1.f, QuickPID::pMode::pOnError, QuickPID::dMode::dOnMeas, QuickPID::iAwMode::iAwClamp, QuickPID::Action::direct);
+QuickPID posZPID(&posZ, &velZSetpoint, &posZSetpoint, 1.f, 1.f, 1.f, QuickPID::pMode::pOnError, QuickPID::dMode::dOnMeas, QuickPID::iAwMode::iAwClamp, QuickPID::Action::direct);
 
 // Function definitions
 int clamp(int, int, int);
 float clamp(float, float, float);
 void initServoLib();
+void setupPID();
 void cmdThrust(float, float);
 void primeESCs();
-void normalEDFTest();
-void impulseEDFTest();
-void sinEDFTest();
+void controlLoop();
 
 void setup() {
   // Init Serial
@@ -41,17 +71,11 @@ void setup() {
   initServoLib();
   // Prime ESCs
   primeESCs();
-
-  // TESTS
-  normalEDFTest();
-  //impulseEDFTest();
-  //sinEDFTest();
 }
 
 void loop() {
 
-  
-  delay(20000);
+  controlLoop();
 }
 
 // Clamp value
@@ -95,144 +119,47 @@ void primeESCs() {
   cmdThrust(0.f, 0.f);
 }
 
-void normalEDFTest() {
+void controlLoop() {
 
-  // TEST CONFIG //
-  float totalTime = 10.f; // How long should it last in seconds
-  float signalUpdateRate = 50.f; // Signal Update Rate in Hz
-  /////////////////
+  // Wait to maintain 50 Hz
+  while (micros() < lastControlMicros + 20000);
 
-  Serial.println("Beginning the normal test in 10 seconds!");
-  Serial.print("It will last "); Serial.print(totalTime); Serial.println(" seconds.");
-  Serial.print("Singal Update Rate: "); Serial.print(signalUpdateRate); Serial.println(" Hz.");
-  delay(10000);
 
-  float increment = 1.f/(signalUpdateRate * totalTime);
-  
-  ulong stepTimeMicros = (ulong)roundf((1.f/signalUpdateRate)*1000000.f);
-  
-  ulong nextUpdateMicros = micros();
 
-  ulong startTime = millis();
-
-  for (float i = 0.f; i <= 1.f; i += increment)
-  {
-    while (micros() < nextUpdateMicros);
-    nextUpdateMicros = micros() + stepTimeMicros;
-
-    EDFN.writeMicroseconds(1000 + (int)roundf(i * 1000));
-    Serial.println(i, 4);
-  }
-
-  ulong timeLapsed = millis() - startTime;
-  Serial.print("End of test! It took: ");
-  Serial.print((timeLapsed / 1000.f));
-  Serial.println(" seconds! Shutting down the EDF...");
-
-  EDFN.writeMicroseconds(1000);
-  
 }
 
-void impulseEDFTest() {
+void setupPID() {
 
-  // TEST CONFIG //
-  float totalTime = 10.f;         // How long should it last in seconds
-  float signalUpdateRate = 50.f;  // Signal Update Rate in Hz
-  float freqMultiplier = 0.8f;    // How much should signal swap time between high and low decrease
-  /////////////////
+  // Setup Limits
+  rollRatePID.SetOutputLimits(-1.f, 1.f);
+  rollPID.SetOutputLimits(-1.f, 1.f);
 
-  Serial.println("Beginning the IMPULSE test in 10 seconds!");
-  Serial.print("It will last "); Serial.print(totalTime); Serial.println(" seconds.");
-  Serial.print("Singal Update Rate: "); Serial.print(signalUpdateRate); Serial.println(" Hz.");
-  delay(10000);
+  pitchRatePID.SetOutputLimits(-1.f, 1.f);
+  pitchPID.SetOutputLimits(-1.f, 1.f);
 
-  float increment = 1.f/(signalUpdateRate * totalTime);
+  yawRatePID.SetOutputLimits(-1.f, 1.f);
+  yawPID.SetOutputLimits(-1.f, 1.f);
 
-  bool isHigh = false;
+  accZPID.SetOutputLimits(-1.f, 1.f);
+  velZPID.SetOutputLimits(-1.f, 1.f);
+  posZPID.SetOutputLimits(-1.f, 1.f);
   
-  ulong stepTimeMicros = (ulong)roundf((1.f/signalUpdateRate)*1000000.f);
-  
-  ulong nextUpdateMicros = micros();
+  // Activate PIDs
+  rollRatePID.SetMode(QuickPID::Control::automatic);
+  rollPID.SetMode(QuickPID::Control::automatic);
 
-  float swapTime = 1.f;
-  ulong nextSwapMicros = micros() + (ulong)roundf(swapTime * 1000.f);
+  pitchRatePID.SetMode(QuickPID::Control::automatic);
+  pitchPID.SetMode(QuickPID::Control::automatic);
 
-  ulong startTime = millis();
+  yawRatePID.SetMode(QuickPID::Control::automatic);
+  yawPID.SetMode(QuickPID::Control::automatic);
 
-  for (float i = 0.f; i <= (totalTime + (1/signalUpdateRate)); i += (1/signalUpdateRate))
-  {
-    while (micros() < nextUpdateMicros);
-    nextUpdateMicros = micros() + stepTimeMicros;
+  accZPID.SetMode(QuickPID::Control::automatic);
+  velZPID.SetMode(QuickPID::Control::automatic);
+  posZPID.SetMode(QuickPID::Control::automatic);
 
-    // Swap
-    if (micros() > nextSwapMicros) {
-      nextSwapMicros = micros() + (ulong)roundf(swapTime * 1000000.f);
-      isHigh = !isHigh;
-
-      if (!isHigh) swapTime *= freqMultiplier;
-    }
-      
-    
-    if (isHigh) {
-      EDFN.writeMicroseconds(2000);
-      Serial.println(1.f);
-    }
-    else {
-      EDFN.writeMicroseconds(1000);
-      Serial.println(0.f);
-    }
-  }
-
-  ulong timeLapsed = millis() - startTime;
-  Serial.print("End of test! It took: ");
-  Serial.print((timeLapsed / 1000.f));
-  Serial.println(" seconds! Shutting down the EDF...");
-
-  EDFN.writeMicroseconds(1000);
-  
 }
 
-void sinEDFTest() {
 
-  // TEST CONFIG //
-  float totalTime = 10.f;         // How long should it last in seconds
-  float signalUpdateRate = 50.f;  // Signal Update Rate in Hz
-  float targetFreq = 3.f * (2.f * PI);        // Final frequency in rad/s
-  /////////////////
-
-  Serial.println("Beginning the SINE test in 10 seconds!");
-  Serial.print("It will last "); Serial.print(totalTime); Serial.println(" seconds.");
-  Serial.print("Singal Update Rate: "); Serial.print(signalUpdateRate); Serial.println(" Hz.");
-  delay(10000);
-
-  float increment = (1.f/(signalUpdateRate * totalTime)) * (targetFreq - PI);
-  
-  ulong stepTimeMicros = (ulong)roundf((1.f/signalUpdateRate)*1000000.f);
-  ulong nextUpdateMicros = micros();
-
-  ulong startTime = millis();
-  
-  float timePassed = 0.f;
-  for (float i = PI; i <= targetFreq; i += increment)
-  {
-    while (micros() < nextUpdateMicros);
-    nextUpdateMicros = micros() + stepTimeMicros;
-
-    timePassed = (millis() - startTime) / 1000.f;
-    
-    float thrust = 0.5f + 0.5f * sinf(timePassed * i);
-    EDFN.writeMicroseconds(1000 + (int)roundf(thrust * 1000.f));
-    Serial.println(thrust);
-
-    if (timePassed >= totalTime) break;
-  }
-
-  ulong timeLapsed = millis() - startTime;
-  Serial.print("End of test! It took: ");
-  Serial.print((timeLapsed / 1000.f));
-  Serial.println(" seconds! Shutting down the EDF...");
-
-  EDFN.writeMicroseconds(1000);
-}
 
 
