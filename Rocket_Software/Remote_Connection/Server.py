@@ -540,7 +540,10 @@ class Server:
                 self.print_client("Euler angle: ")
                 temps_debut = time.time()
                 while (time.time() - temps_debut) < 10:
-                    self.print_client(sensor.euler)
+                    sensor_euler = sensor.euler
+                    heading, roll, pitch = [position - self.target_angle_offset[idx] for idx, position in enumerate(sensor_euler)]
+                    euler = (heading, roll, pitch)
+                    self.print_client(euler)
                     time.sleep(1)
 
                 self.print_client("input -sensors_satisfied")
