@@ -263,6 +263,8 @@ class Client:
                     input_sensor = input("Please answer by 'y' or 'n': ").lower()
                 if input_sensor == 'y':
                     self.__sock.sendall(str("input -sensors_satisfied").encode())
+                else:
+                    self.__sock.sendall(str("input -sensors_not_satisfied").encode())
             case _:
                 print(msg)
 

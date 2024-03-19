@@ -72,6 +72,9 @@ class Server:
         self.euler_angle = 0
         self.stop_sensor_fusion_thread = False
         self.sensor_offset : str
+        self.yaw = 0
+        self.pitch = 0
+        self.roll = 0
         self.sensor_offset_done = False
         self.sensor_yaw_offset = False
         self.sensor_roll_offset = False
@@ -274,7 +277,8 @@ class Server:
             case "input -sensors_satisfied":
                 self.sensor_satisfied = True
                 self.sensor_offset_satisfied = True
-
+            case "input -sensors_not_satisfied":
+                self.sensor_satisfied = True
             # example of msg to send: "euler -offset==1,-2,3"
             case "euler -offset":
                 self.euler_offset = np.array([float(i) for i in msg.split("==")[1].split(",")])
@@ -428,6 +432,7 @@ class Server:
 
     # region Sensors
     def Start_sensors(self):
+        self.log_and_print("Starting the sensor fusion",Server.GREEN)
         self.sensors = Sensors.sensor_fusion(self.target_angle_offset)
         self.sensors.Start_measurement()
         self.sensor_fusion_thread = threading.Thread(target=self.sensors.main_task)
@@ -524,25 +529,25 @@ class Server:
                 time.sleep(1)
 
             while satisfaction == "n":
-                self.print_client("input -sensors_roll")
-                while not self.input_sensors_roll_set:
+                self.print_client("input -sensors_yaw")
+                while not self.input_sensors_yaw_set:
                     pass
                 self.print_client("input -sensors_pitch")
                 while not self.input_sensors_pitch_set:
                     pass
-                self.print_client("input -sensors_yaw")
-                while not self.input_sensors_yaw_set:
+                self.print_client("input -sensors_roll")
+                while not self.input_sensors_roll_set:
                     pass
-                yaw = self.sensor_yaw_offset
-                pitch = self.sensor_pitch_offset
-                roll = self.sensor_roll_offset
-                self.target_angle_offset = (yaw, pitch, roll)
+                self.yaw += self.sensor_yaw_offset
+                self.pitch += self.sensor_pitch_offset
+                self.roll += self.sensor_roll_offset
+                self.target_angle_offset = (self.yaw, self.pitch, self.roll)
                 self.print_client("Euler angle: ")
                 temps_debut = time.time()
                 while (time.time() - temps_debut) < 10:
                     sensor_euler = sensor.euler
-                    heading, roll, pitch = [position - self.target_angle_offset[idx] for idx, position in enumerate(sensor_euler)]
-                    euler = (heading, roll, pitch)
+                    yaw_corrected, pitch_corrected, roll_corrected = [position - self.target_angle_offset[idx] for idx, position in enumerate(sensor_euler)]
+                    euler = (yaw_corrected, pitch_corrected, roll_corrected)
                     self.print_client(euler)
                     time.sleep(1)
 
