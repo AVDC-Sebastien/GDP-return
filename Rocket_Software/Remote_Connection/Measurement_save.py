@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import matplotlib.pyplot as plt
 
 class save_tuning_data:
     
@@ -8,6 +9,8 @@ class save_tuning_data:
         self.Lidar = np.array([],dtype=[(save_tuning_data.TIME,float),(save_tuning_data.DATA,float,(1,2))])
         self.Camera = np.array([],dtype=[(save_tuning_data.TIME,float),(save_tuning_data.DATA,float,(2,3))])
         self.imu = np.array([],dtype=[(save_tuning_data.TIME,float),(save_tuning_data.DATA,float,(3,3))])
+
+        self.uav_state = []
 
         self.all_data = np.array([self.Qualisys,self.Lidar,self.Camera,self.imu])
     
@@ -32,22 +35,77 @@ class save_tuning_data:
     def save_imu(self, imu = [[0,0,0],[0,0,0],[0,0,0]], time = 0):
         self.imu = np.append(self.imu,np.array((time,imu),dtype=[(save_tuning_data.TIME,float),(save_tuning_data.DATA,float,(3,3))]))
 
-    def save_all(self, folder_path : str = "Rocket_Software\saved_measurement"): 
+    def save_all(self, folder_path : str = r"\Rocket_Software\saved_measurement"): 
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
-        np.savetxt(folder_path + "\Qualisys_data.csv",self.Qualisys,delimiter=",")
-        np.save(folder_path + "\Camera_data.csv",self.Camera,delimiter=",")
-        np.save(folder_path + "\Lidar_data.csv",self.Lidar,delimiter=",")
-        np.save(folder_path + "\imu_data.csv",self.imu,delimiter=",")
+        np.save(folder_path + r"\Qualisys_data.csv",self.Qualisys)
+        np.save(folder_path + r"\Camera_data.csv",self.Camera)
+        np.save(folder_path + r"\Lidar_data.csv",self.Lidar)
+        np.save(folder_path + r"\imu_data.csv",self.imu)
 
-    # def load_all(self, folder_path):
-    #         self.Qualisys = np.load(folder_path + "\Qualisys_data.csv",allow_pickle=True)
-    #         self.Camera = np.load(folder_path + "\Camera_data.csv",allow_pickle=True)
-    #         self.Lidar = np.load(folder_path + "\Lidar_data.csv",allow_pickle=True)
-    #         self.imu = np.load(folder_path + "\imu_data.csv",allow_pickle=True)
+    def load_all(self, folder_path):
+            self.Qualisys = np.load(folder_path + r"\Qualisys_data.csv")
+            self.Camera = np.load(folder_path + r"\Camera_data.csv")
+            self.Lidar = np.load(folder_path + r"\Lidar_data.csv")
+            self.imu = np.load(folder_path + r"\imu_data.csv")
+    def save_state_UAV(self,uav_state):
+        np.append([self.uav_state],[uav_state],axis=0)
+    # x,y,z,velocity,euler
+    def __str__(self,uav_state = None) -> str:
+        if uav_state != None:
+            plt.figure(1)
+            plt.plot(self.Qualisys[:,0])
+            plt.plot(uav_state[:,0])
+            plt.xlabel("time")
+            plt.ylabel("x(m)")
+            plt.title("x position of Qualisys and the state")
+            plt.legend()
+            
+            plt.figure(2)
+            plt.plot(self.Qualisys[:,1])
+            plt.plot(uav_state[:,1])
+            plt.xlabel("time")
+            plt.ylabel("y(m)")
+            plt.title("y position of Qualisys and the state")
+            plt.legend()
+            
+            plt.figure(3)
+            plt.plot(self.Qualisys[:,2])
+            plt.plot(uav_state[:,2])
+            plt.xlabel("time")
+            plt.ylabel("z(m)")
+            plt.title("z position of Qualisys and the state")
+            plt.legend()
+            #psi theta phi
+            plt.figure(4)
+            plt.plot(self.Qualisys[:,6])
+            plt.plot(uav_state[:,3])
+            plt.xlabel("time")
+            plt.ylabel("psi(deg)")
+            plt.title("Psi position of Qualisys and the state")
+            plt.legend()
+            
+            plt.figure(5)
+            plt.plot(self.Qualisys[:,7])
+            plt.plot(uav_state[:,4])
+            plt.xlabel("time")
+            plt.ylabel("theta(deg)")
+            plt.title("Theta position of Qualisys and the state")
+            plt.legend()
+            
+            plt.figure(6)
+            plt.plot(self.Qualisys[:,8])
+            plt.plot(uav_state[:,5])
+            plt.xlabel("time")
+            plt.ylabel("phi(deg)")
+            plt.title("Phi position of Qualisys and the state")
+            plt.legend()
+            plt.show()
 
-
-    def __str__(self) -> str:
+            plt.figure(7)
+            plt.axes(projection='3d').plot3D(self.Qualisys[:,0],self.Qualisys[:,1],self.Qualisys[:,2],'green')
+            plt.axes.set_title("Position from Qualisys and State")
+            plt.axes(projection='3d').plot3D(self.uav_state[:,0],self.uav_state[:,1],self.uav_state[:,2],'blue')
         return str(np.array([self.Qualisys,self.Lidar,self.Camera,self.imu]))
 
 if __name__ == "__main__":
