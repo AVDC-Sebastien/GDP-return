@@ -55,7 +55,11 @@ class Server:
         self.__qtm_rotation = []
 
         # ESP32
-        self.ESP32 : ESP32 = ESP32()
+        try:
+            self.ESP32 : ESP32 = ESP32()
+            self.log_and_print("ESP32 connected to the raspberry",Server.ERROR)
+        except:
+            self.log_and_print("ESP32 not connected to the raspberry",Server.ERROR)
         self.ESP32_data = "data"
 
         # Path
@@ -73,7 +77,11 @@ class Server:
         self.sensor_roll_offset = False
         self.sensor_pitch_offset = False
         self.sensor_offset_satisfied = False
-
+        self.sensors_offset_done = False
+        self.sensor_satisfied = False
+        self.input_sensors_roll_set = False
+        self.input_sensors_pitch_set = False
+        self.input_sensors_yaw_set = False
         self.target_angle_offset = (0,0,0)
 
         self.start_server()
@@ -87,7 +95,7 @@ class Server:
         self.Server_command_thread.daemon = True
         self.Server_command_thread.start()
         self.open_server()
-        self.Start_sensors()
+        self.imu_calibration()
         self.Handle_server_activity()
         
         #self.start_QTM()
@@ -97,10 +105,9 @@ class Server:
         Manage the connection of the clients
         '''
         try:
-        
-            log_and_print(f"Opening the local server on port: {HOST}")
+            self.log_and_print(f"Opening the local server on port: {HOST}")
             self.__sock.listen(self.max_clients)
-            log_and_print("Server open",Server.GREEN)
+            self.log_and_print("Server open",Server.GREEN)
             self.isServeropen = True
         
 
@@ -110,7 +117,7 @@ class Server:
             self.IP = address[0]
             self.port = address[1]
             self.name = "Ground_station"
-            log_and_print(f"Ground station connected with ip: {self.IP} on port: {self.port}",Server.INFO)
+            self.log_and_print(f"Ground station connected with ip: {self.IP} on port: {self.port}",Server.INFO)
             self.ground_station = connected_client
             
             # Message to send
@@ -130,8 +137,8 @@ class Server:
 
 
         except Exception as ex:
-            log_and_print(ex)
-            log_and_print("Could not connect",Server.WARNING)
+            self.log_and_print(ex)
+            self.log_and_print("Could not connect",Server.WARNING)
             self.open_server()
     # endregion
             
@@ -144,7 +151,7 @@ class Server:
         self.__needs_to_stop_sending_gs = False
         self.sending_thread = threading.Thread(target = self.send_message)
         self.sending_thread.start()
-        log_and_print(f"Starting sending messages to {self.name}",Server.GREEN)
+        self.log_and_print(f"Starting sending messages to {self.name}",Server.GREEN)
 
     def stop_sending(self):
         '''
@@ -152,7 +159,7 @@ class Server:
         '''
         self.__needs_to_stop_sending_gs = True
         self.sending_thread.join()
-        log_and_print(f"Stopped sending messages to {self.name}",Server.INFO)
+        self.log_and_print(f"Stopped sending messages to {self.name}",Server.INFO)
 
     def send_message(self):
         '''
@@ -169,13 +176,13 @@ class Server:
                     print("test",self.test)
         except:
                 if self.__needs_to_stop_sending_gs and not self.isServerrunning:
-                    log_and_print("Stopped sending",Server.INFO)
+                    self.log_and_print("Stopped sending",Server.INFO)
                 elif self.isGround_station_connected:
-                    log_and_print(f"Message couldn't be sent to {self.name}. Restarting sending...",Server.WARNING)
+                    self.log_and_print(f"Message couldn't be sent to {self.name}. Restarting sending...",Server.WARNING)
                     self.stop_sending()
                     self.start_sending()
                 else:
-                    log_and_print(f"Client {self.name} is not connected",Server.WARNING)
+                    self.log_and_print(f"Client {self.name} is not connected",Server.WARNING)
     #endregion
     
     # region Receiveing message
@@ -186,7 +193,7 @@ class Server:
         self.__needs_to_stop_receiving_gs = False
         self.receiving_thread = threading.Thread(target = self.receive_message)
         self.receiving_thread.start()
-        log_and_print(f"Starting receiving messages from {self.name}",Server.GREEN)
+        self.log_and_print(f"Starting receiving messages from {self.name}",Server.GREEN)
 
     def stop_receiving(self):
         '''
@@ -194,7 +201,7 @@ class Server:
         '''
         self.__needs_to_stop_receiving_gs = True
         self.receiving_thread.join()
-        log_and_print(f"Stopped receiving messages from {self.name}",Server.INFO)   
+        self.log_and_print(f"Stopped receiving messages from {self.name}",Server.INFO)   
 
     def receive_message(self):
         '''
@@ -209,7 +216,7 @@ class Server:
         except Exception as ex:
             if not self.__needs_to_stop_receiving_gs:
                 print(ex)
-                log_and_print(f"Error in receiving a message from {self.name}",Server.WARNING)
+                self.log_and_print(f"Error in receiving a message from {self.name}",Server.WARNING)
                 self.shutdown()
 
     def execute_message(self,msg : str):
@@ -254,13 +261,18 @@ class Server:
                     self.sensor_offset = 'n'
                     self.sensor_offset_done = False
 
-            case "input -sensors_roll_offset":
-                self.sensor_roll_offset = float(msg.split("==")[1])
-            case "input -sensors_yaw_offset":
-                self.sensor_yaw_offset = float(msg.split("==")[1])
-            case "input -sensors_pitch_offset":
+            case "sensor -Off_P":
                 self.sensor_pitch_offset = float(msg.split("==")[1])
+                self.input_sensors_pitch_set = True
+            case "sensor -Off_R":
+                self.sensor_roll_offset = float(msg.split("==")[1])
+                self.input_sensors_roll_set = True
+            case "sensor -Off_Y":
+                self.sensor_yaw_offset = float(msg.split("==")[1])
+                self.input_sensors_yaw_set = True
+            
             case "input -sensors_satisfied":
+                self.sensor_satisfied = True
                 self.sensor_offset_satisfied = True
 
             # example of msg to send: "euler -offset==1,-2,3"
@@ -277,7 +289,7 @@ class Server:
 
             case _:
                 if self.print_received_data and self.isGround_station_connected:
-                    log_and_print(f"Message received from {self.name} : " + msg)
+                    self.log_and_print(f"Message received from {self.name} : " + msg)
 
     # endregion
     # endregion
@@ -294,7 +306,7 @@ class Server:
     def Handle_server_activity(self):
         while True:
             if not self.isServeropen:
-                log_and_print("Shutting down the server",Server.WARNING)
+                self.log_and_print("Shutting down the server",Server.WARNING)
                 if self.isGround_station_connected:
                     self.stop_sending()
                     self.stop_receiving()
@@ -326,7 +338,7 @@ class Server:
             if not self.isGround_station_connected and not self.isServerrunning:
                 exit()
             elif self.isGround_station_connected:
-                log_and_print("Disconnecting client failed",Server.ERROR)
+                self.log_and_print("Disconnecting client failed",Server.ERROR)
                 again = input("Try again if not the server will force shutdown ? (Y/n)")
                 while again.lower() not in ('y','n'):
                     again = input("Please only answer by 'Y' or 'n' only: ")
@@ -341,7 +353,7 @@ class Server:
     # region Getting the data from qtm
                 
     def start_QTM(self):
-        log_and_print("Starting QTM connection")
+        self.log_and_print("Starting QTM connection")
         self.__disconnect_QTM.clear()
         self.qtm_thread = threading.Thread(target=self.Async_start_QTM,args=[self.__qtm_position])
         self.qtm_thread.start()
@@ -416,19 +428,18 @@ class Server:
 
     # region Sensors
     def Start_sensors(self):
-        self.senors = Sensors.sensor_fusion(self.target_angle_offset)
-        self.senors.Start_measurement()
-        self.sensor_fusion_thread = threading.Thread(target=self.senors.main_task)
+        self.sensors = Sensors.sensor_fusion(self.target_angle_offset)
+        self.sensors.Start_measurement()
+        self.sensor_fusion_thread = threading.Thread(target=self.sensors.main_task)
         time.sleep(5)
         self.sensor_fusion_thread.start()
-        print_with_colors("Started",Server.GREEN)
+        self.log_and_print("Started",Server.GREEN)
     
     def Stop_sensors(self):
-        self.senors.Stop_measurement() 
+        self.sensors.Stop_measurement() 
         self.sensor_fusion_thread.join()
-    def imu_calibration(self,client:socket.socket):
-
     
+    def imu_calibration(self):
         # pylint: disable=too-few-public-methods
         class Mode:
             CONFIG_MODE = 0x00
@@ -456,9 +467,9 @@ class Server:
         # i2c = board.STEMMA_I2C()  # For using the built-in STEMMA QT connector on a microcontroller
         sensor = adafruit_bno055.BNO055_I2C(i2c)
         sensor.mode = Mode.NDOF_MODE  # Set the sensor to NDOF_MODE
-        client.sendall(str("ping").encode())
-        self.print_client("Magnetometer: Perform the figure-eight calibration dance.")
-        while not sensor.calibration_status[3] == 3:
+
+        self.print_client("sensor -text==magnetometer")
+        if not sensor.calibration_status[3] == 3:
             # Calibration Dance Step One: Magnetometer
             #   Move sensor away from magnetic interference or shields
             #   Perform the figure-eight until calibrated
@@ -467,8 +478,8 @@ class Server:
         self.print_client("... CALIBRATED")
         time.sleep(1)
 
-        self.print_client("Accelerometer: Perform the six-step calibration dance.")
-        while not sensor.calibration_status[2] == 3:
+        self.print_client("sensor -text==accel")
+        if not sensor.calibration_status[2] == 3:
             # Calibration Dance Step Two: Accelerometer
             #   Place sensor board into six stable positions for a few seconds each:
             #    1) x-axis right, y-axis up,    z-axis away
@@ -483,8 +494,8 @@ class Server:
         self.print_client("... CALIBRATED")
         time.sleep(1)
 
-        self.print_client("Gyroscope: Perform the hold-in-place calibration dance.")
-        while not sensor.calibration_status[1] == 3:
+        self.print_client("sensor -text==gyro")
+        if not sensor.calibration_status[1] == 3:
             # Calibration Dance Step Three: Gyroscope
             #  Place sensor in any stable position for a few seconds
             #  (Accelerometer calibration may also calibrate the gyro)
@@ -494,12 +505,12 @@ class Server:
         time.sleep(1)
 
         self.print_client("\nCALIBRATION COMPLETED")
-        self.print_client("Insert these preset offset values into project code:")
-        self.print_client(f"  Offsets_Magnetometer:  {sensor.offsets_magnetometer}")
-        self.print_client(f"  Offsets_Gyroscope:     {sensor.offsets_gyroscope}")
-        self.print_client(f"  Offsets_Accelerometer: {sensor.offsets_accelerometer}")
-
-        self.print_client("input -sensors_offset==Do you want to set an offset for the imu? ? (y/n) : ")
+        self.print_client("sensor -text==insert")
+        self.print_client(f"sensor -Off_M=={sensor.offsets_magnetometer}")
+        self.print_client(f"sensor -Off_G=={sensor.offsets_gyroscope}")
+        self.print_client(f"sensor -Off_A=={sensor.offsets_accelerometer}")
+        time.sleep(0.2)
+        self.print_client("input -sensors_offset")
         while not self.sensor_offset_done:
             pass    
         if self.sensor_offset == 'y':
@@ -507,25 +518,42 @@ class Server:
             satisfaction = "n"
 
             # Exécuter la tâche pendant 10 secondes
+            self.print_client("Euler angle: ")
             while (time.time() - temps_debut) < 10:
-                self.print_client("Euler angle: {}".format(sensor.euler))
+                self.print_client(sensor.euler)
+                time.sleep(1)
 
             while satisfaction == "n":
-                self.print_client("input -sensors_yaw==give the wanted yaw offset : ")
-                self.print_client("input -sensors_pitch==give the wanted pitch offset : ")
-                self.print_client("input -sensors_roll==give the wanted roll offset : ")
+                self.print_client("input -sensors_roll")
+                while not self.input_sensors_roll_set:
+                    pass
+                self.print_client("input -sensors_pitch")
+                while not self.input_sensors_pitch_set:
+                    pass
+                self.print_client("input -sensors_yaw")
+                while not self.input_sensors_yaw_set:
+                    pass
                 yaw = self.sensor_yaw_offset
                 pitch = self.sensor_pitch_offset
                 roll = self.sensor_roll_offset
-                target_angle_offset = (yaw, pitch, roll)
+                self.target_angle_offset = (yaw, pitch, roll)
+                self.print_client("Euler angle: ")
+                temps_debut = time.time()
                 while (time.time() - temps_debut) < 10:
-                    self.print_client("Euler angle: {}".format(sensor.euler))
+                    self.print_client(sensor.euler)
+                    time.sleep(1)
 
-                self.print_client("input -sensors_satisfied==are you satisfied of the offset? ? (y/n) : ")
-            
-                if self.sensor_offset_satisfied == "y":
+                self.print_client("input -sensors_satisfied")
+                while not self.sensor_satisfied:
+                    pass
+                if self.sensor_offset_satisfied:
                     satisfaction = "y"
                     self.Start_sensors()
+                else:
+                    self.sensor_satisfied = False
+                    self.input_sensors_yaw_set = False
+                    self.input_sensors_pitch_set = False
+                    self.input_sensors_roll_set = False
     
         elif self.sensor_offset == "n":
             self.target_angle_offset = (0, 0, 0)
@@ -537,47 +565,49 @@ class Server:
     def Start_ESP32(self):
         self.ESP32_com_thread = threading.Thread(target=self.ESP32.Start_sending,args=[self.ESP32_data])
         self.ESP32_com_thread.start()
-        log_and_print(f"Start sending data to ESP32 from {self.port}...",Server.GREEN)
+        self.log_and_print(f"Start sending data to ESP32 from {self.port}...",Server.GREEN)
 
     
     def Stop_ESP32(self):
         self.ESP32.Stop_sending()
         self.ESP32_com_thread.join()
-        log_and_print(f"Stopped sending data to ESP32 from {self.port}...",Server.GREEN)
+        self.log_and_print(f"Stopped sending data to ESP32 from {self.port}...",Server.GREEN)
     # endregion
-    def print_client(self,msg):
+    def print_client(self,msg,level: int = INFO):
         self.ground_station.sendall(str(msg).encode())
+        self.log_and_print(msg,level,False)
 
-def log_and_print(txt: str, level: int = Server.INFO):
-    print_with_colors(txt,level)
-    match level:
-        case Server.DEBUG:
-            logging.debug(txt)
-        case Server.INFO:
-            logging.info(txt)
-        case Server.ERROR:
-            logging.error(txt)
-        case Server.WARNING:
-            logging.warning(txt)    
-        case Server.CRITICAL:
-            logging.critical(txt)
-        case Server.GREEN:
-            logging.info(txt+" !!")
+    def log_and_print(self, txt: str, level: int = INFO, print_to_cl : bool = True):
+        if print_to_cl:
+            self.print_with_colors(txt,level)
+        match level:
+            case Server.DEBUG:
+                logging.debug(txt)
+            case Server.INFO:
+                logging.info(txt)
+            case Server.ERROR:
+                logging.error(txt)
+            case Server.WARNING:
+                logging.warning(txt)    
+            case Server.CRITICAL:
+                logging.critical(txt)
+            case Server.GREEN:
+                logging.info(txt+" !!")
 
-def print_with_colors(txt:str,txt_type:str):
-    match txt_type:
-        case Server.DEBUG:
-            print("debug" + txt)
-        case Server.INFO:
-            print(txt)
-        case Server.ERROR:
-            print(f"\033[91mError: {txt}\033[00m")
-        case Server.WARNING:
-            print(f"\033[93mWarning: {txt}\033[00m")
-        case Server.CRITICAL:
-            print(f"\033[93mCritical !!! {txt}\033[00m")
-        case Server.GREEN:
-            print(f"\033[92m{txt}\033[00m")
+    def print_with_colors(self,txt:str,txt_type:int = INFO):
+        match txt_type:
+            case Server.DEBUG:
+                print("debug" + txt)
+            case Server.INFO:
+                print(txt)
+            case Server.ERROR:
+                print(f"\033[91mError: {txt}\033[00m")
+            case Server.WARNING:
+                print(f"\033[93mWarning: {txt}\033[00m")
+            case Server.CRITICAL:
+                print(f"\033[93mCritical !!! {txt}\033[00m")
+            case Server.GREEN:
+                print(f"\033[92m{txt}\033[00m")
 
 
 

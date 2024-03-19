@@ -4,7 +4,7 @@ import time
 import msvcrt
 import os
 
-HOST, PORT = '138.250.151.140', 65000
+HOST, PORT = '138.250.151.213', 65000
 
 class Client:
     
@@ -219,15 +219,50 @@ class Client:
                 self.t = 1000 * (time.time() - self.__sending_time[-1])
                 print("receiving time : " + str(self.t) +"ms")
                 self.__sending_time[-1] = self.t
-
+            
+            case "sensor -text":
+                match msg.split("==")[1]:
+                    case "magnetometer":
+                        print("Magnetometer: Perform the figure-eight calibration dance.")
+                    case "accel":
+                        print("Accelerometer: Perform the six-step calibration dance.")
+                    case "gyro":
+                        print("Gyroscope: Perform the hold-in-place calibration dance.")
+                    case "insert":
+                        print("Insert these preset offset values into project code:")
+            
+            case "sensor -Off_M":
+                print("  Offsets Magnetometer:  ",msg.split("==")[1])
+            case "sensor -Off_G":
+                print("  Offsets_Gyroscope: ",msg.split("==")[1])
+            case "sensor -Off_A":
+                print("  Offsets_Accelerometer: ",msg.split("==")[1])
+           
             case "input -sensors_offset":
-                input_sensor = input(msg.split("==")[1]).lower()
+                input_sensor = input("Do you want to set an offset for the imu? (y/n) : ")
                 while input_sensor not in ('y','n'):
                     input_sensor = input("Please answer by 'y' or 'n': ").lower()
                 if input_sensor == 'y':
                     self.__sock.sendall(str("input -sensors_offset==y").encode())
                 else:
                     self.__sock.sendall(str("input -sensors_offset==n").encode())
+            
+            case "input -sensors_yaw":
+                yaw_offset = input("give the wanted yaw offset : ")
+                self.__sock.sendall(str(f"sensor -Off_Y=={yaw_offset}").encode())
+            case "input -sensors_pitch":
+                pitch_offset = input("give the wanted pitch offset : ")
+                self.__sock.sendall(str(f"sensor -Off_P=={pitch_offset}").encode())
+            case "input -sensors_roll":
+                roll_offset = input("give the wanted roll offset : ")
+                self.__sock.sendall(str(f"sensor -Off_R=={roll_offset}").encode())
+            
+            case "input -sensors_satisfied":
+                input_sensor = input("Are you satisfied of the offset? (y/n) : ")
+                while input_sensor not in ('y','n'):
+                    input_sensor = input("Please answer by 'y' or 'n': ").lower()
+                if input_sensor == 'y':
+                    self.__sock.sendall(str("input -sensors_satisfied").encode())
             case _:
                 print(msg)
 
