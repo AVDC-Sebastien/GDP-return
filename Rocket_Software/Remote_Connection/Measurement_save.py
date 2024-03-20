@@ -6,13 +6,14 @@ class save_tuning_data:
     
     def __init__(self) -> None:
         self.Qualisys = np.array([],dtype=[(save_tuning_data.TIME,float),(save_tuning_data.DATA,float,(1,3))])
-        self.Lidar = np.array([],dtype=[(save_tuning_data.TIME,float),(save_tuning_data.DATA,float,(1,2))])
-        self.Camera = np.array([],dtype=[(save_tuning_data.TIME,float),(save_tuning_data.DATA,float,(2,3))])
-        self.imu = np.array([],dtype=[(save_tuning_data.TIME,float),(save_tuning_data.DATA,float,(3,3))])
+        self.Lidar = np.array([])
+        self.Camera_TOP = np.array([],dtype=[(save_tuning_data.TIME,float),(save_tuning_data.ID,float),(save_tuning_data.N,float),(save_tuning_data.DATA,float,(6))])
+        self.Camera_BOT = np.array([],dtype=[(save_tuning_data.TIME,float),(save_tuning_data.ID,float),(save_tuning_data.N,float),(save_tuning_data.DATA,float,(6))])
+        self.imu = np.array([],dtype=[(save_tuning_data.TIME,float),(save_tuning_data.EULER,float,(3)),(save_tuning_data.ANGULAR_RATE,float,(3)),(save_tuning_data.ACCELERATION,float,(3))])
 
         self.uav_state = []
 
-        self.all_data = np.array([self.Qualisys,self.Lidar,self.Camera,self.imu])
+        self.all_data = np.array([self.Qualisys,self.Lidar,self.Camera_TOP,self.Camera_BOT,self.imu])
     
     QUALISYS = 0
     LIDAR = 1
@@ -21,30 +22,48 @@ class save_tuning_data:
 
     TIME = 'time'
     DATA = 'data'
+    ID = 'id'
+    N = 'n'
+    EULER = 'euler'
+    ANGULAR_RATE = 'angular_rate'
+    ACCELERATION = 'acceleration'
 
-
+    #region Save
     def save_Qualisys(self,Qualisys = [0,0,0], time : float = 0):
         self.Qualisys = np.append(self.Qualisys,np.array((time,Qualisys),dtype=[(save_tuning_data.TIME,float),(save_tuning_data.DATA,float,(1,3))]))
 
-    def save_Lidar(self,Lidar = [0,0], time = 0):
-        self.Lidar = np.append(self.Lidar,np.array((time,Lidar),dtype=[(save_tuning_data.TIME,float),(save_tuning_data.DATA,float,(1,2))]))
+    def save_Lidar(self,Lidar_Time = [0,0]): 
+        '''
+        [valeur,temps] array
+        '''
+        self.Lidar = np.append(self.Lidar,(Lidar_Time))
 
-    def save_Camera_TOP(self,Camera = [[0,0,0],[0,0,0]], time = 0):
-        self.Camera = np.append(self.Camera,np.array((time,Camera),dtype=[(save_tuning_data.TIME,float),(save_tuning_data.DATA,float,(2,3))]))
+    def save_Camera_TOP(self,Camera : list = [0,0,0,[0,0,0,0,0,0]]):
+        '''
+        [T, id, n, [0,0,0,0,0,0]]
+        '''
+        self.Camera_TOP = np.append(self.Camera_TOP,np.array(tuple(Camera),dtype=[(save_tuning_data.TIME,float),(save_tuning_data.ID,float),(save_tuning_data.N,float),(save_tuning_data.DATA,float,(6))]))
 
-    def save_Camera_BOT(self,Camera = [[0,0,0],[0,0,0]], time = 0):
-        self.Camera = np.append(self.Camera,np.array((time,Camera),dtype=[(save_tuning_data.TIME,float),(save_tuning_data.DATA,float,(2,3))]))
+    def save_Camera_BOT(self,Camera = [0,0,[0,0,0,0,0,0]]):
+        '''
+        [T, id, n, [0,0,0,0,0,0]]
+        '''
+        self.Camera_BOT = np.append(self.Camera_BOT,np.array(tuple(Camera),dtype=[(save_tuning_data.TIME,float),(save_tuning_data.ID,float),(save_tuning_data.N,float),(save_tuning_data.DATA,float,(6))]))
     
-    def save_imu(self, imu = [[0,0,0],[0,0,0],[0,0,0]], time = 0):
-        self.imu = np.append(self.imu,np.array((time,imu),dtype=[(save_tuning_data.TIME,float),(save_tuning_data.DATA,float,(3,3))]))
-
+    def save_imu(self, imu = [0,[0,0,0],[0,0,0],[0,0,0]]):
+        '''
+        [temps,[0,0,0],[0,0,0],[0,0,0]] 
+        '''
+        self.imu = np.append(self.imu,np.array(tuple(imu),dtype=[(save_tuning_data.TIME,float),(save_tuning_data.EULER,float,(3)),(save_tuning_data.ANGULAR_RATE,float,(3)),(save_tuning_data.ACCELERATION,float,(3))]))
+    # endregion
+    
     def save_all(self, folder_path : str = r"\Rocket_Software\saved_measurement"): 
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
         np.save(folder_path + r"\Qualisys_data.csv",self.Qualisys)
-        np.save(folder_path + r"\Camera_data_top.csv",self.Camera)
-        np.save(folder_path + r"\Camera_data_bot.csv",self.Camera)
         np.save(folder_path + r"\Lidar_data.csv",self.Lidar)
+        np.save(folder_path + r"\Camera_data_top.csv",self.Camera_TOP)
+        np.save(folder_path + r"\Camera_data_bot.csv",self.Camera_BOT)
         np.save(folder_path + r"\imu_data.csv",self.imu)
 
     def load_all(self, folder_path):
@@ -56,7 +75,7 @@ class save_tuning_data:
     
     def save_state_UAV(self,uav_state):
         np.append([self.uav_state],[uav_state],axis=0)
-    # x,y,z,velocity,euler
+
     def __str__(self,uav_state = None) -> str:
         if uav_state != None:
             plt.figure(1)
@@ -82,6 +101,7 @@ class save_tuning_data:
             plt.ylabel("z(m)")
             plt.title("z position of Qualisys and the state")
             plt.legend()
+
             #psi theta phi
             plt.figure(4)
             plt.plot(self.Qualisys[:,3],label="Qualisys")
@@ -112,13 +132,15 @@ class save_tuning_data:
             plt.axes(projection='3d').plot3D(self.Qualisys[:,0],self.Qualisys[:,1],self.Qualisys[:,2],'green')
             plt.axes.set_title("Position from Qualisys and State")
             plt.axes(projection='3d').plot3D(self.uav_state[:,0],self.uav_state[:,1],self.uav_state[:,2],'blue')
-        return str(np.array([self.Qualisys,self.Lidar,self.Camera,self.imu]))
+        return("Qualisys: "+ str(self.Qualisys)+"\nLidar: "+str(self.Lidar)+"\nCamera top: "+str(self.Camera_TOP)+"\nCamera bot: "+str(self.Camera_BOT)+"\nImu : "+str(self.imu))
+        #return str([self.Qualisys,self.Lidar,self.Camera_TOP,self.Camera_BOT,self.imu])
 
 if __name__ == "__main__":
     save = save_tuning_data()
-    save.save_Qualisys([1,1,1],0)
-    save.save_Lidar([2,2],0)
-    save.save_Camera_TOP([[3,3,3],[3.2,3.2,3.2]])
-    save.save_imu([[4.1,4.1,4.1],[4.2,4.2,4.2],[4.3,4.3,4.3]])
+    save.save_Qualisys([1,1,1])
+    save.save_Lidar([2,2])
+    save.save_Camera_TOP([3,3,4,[3,2,3,2,3,2]])
+    save.save_Camera_BOT([3,3,4,[3,2,3,2,3,2]])
+    save.save_imu([0,[1,4.1,4.1],[4.2,4.2,4.2],[4.3,4.3,4.3]])
     print(save)
     save.save_all()
