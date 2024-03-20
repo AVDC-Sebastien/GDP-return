@@ -14,11 +14,13 @@ from numpy.linalg import inv
 from time import sleep
 from picamera2 import Picamera2
 import copy
+from Rocket_Software.Remote_Connection.Measurement_save import save_tuning_data
 
 
 class sensor_fusion():
 
     def __init__(self,target_angle_offset):
+        self.save_data = save_tuning_data()
         self.stop_main_sensor_thread = False
         self.stop_measurement_thread = False
 
@@ -842,7 +844,8 @@ class sensor_fusion():
                     yaw_z = math.degrees(yaw_z)
 
                     camera_measurement = np.array([[transform_translation_x, transform_translation_y, transform_translation_z, roll_x, pitch_y, yaw_z]])
-
+                    for_save = [t1, marker_id, n, camera_measurement]
+                    self.save_data.save_Camera_TOP(for_save)
                     new_row = [marker_id,  # ID
                         n,  # Numéro d'incrémentation
                         t1,  # Temps (simulé ici)
@@ -1061,7 +1064,8 @@ class sensor_fusion():
                     yaw_z = math.degrees(yaw_z)
 
                     camera_measurement = np.array([[transform_translation_x, transform_translation_y, transform_translation_z, roll_x, pitch_y, yaw_z]])
-
+                    for_save = [t1, marker_id, n, camera_measurement]
+                    self.save_data.save_Camera_BOT(for_save)
                     new_row = [marker_id,  # ID
                         n,  # Numéro d'incrémentation
                         t1,  # Temps (simulé ici)
@@ -1173,6 +1177,7 @@ class sensor_fusion():
                                     [angular_rate[0], angular_rate[1], angular_rate[2]],
                                     [acceleration[0], acceleration[1], acceleration[2]]
                                     ]
+                    self.save_data.save_imu(self.get_imu_meas)
             # shared_data["imu_measurement"] = imu_data
             
     def lidar_task(self,get_lidar_meas):
@@ -1231,6 +1236,7 @@ class sensor_fusion():
                                                 [distance*100],
                                                 [t1]
                                                 ])
+                    self.save_data.save_Lidar(self.get_lidar_meas)
             
               
             #print ("La distance est de : ",distance," cm, mesure:",x)
