@@ -7,8 +7,8 @@ import time
 import board
 import adafruit_bno055
 import numpy as np
-from Rocket_Software.ESP32.ESP32_Com import ESP32
-import Rocket_Software.Sensors.SLAM_final.Sensor_fusion as Sensors
+from ESP32_Com import ESP32
+import Sensor_fusion as Sensors
 
 
 HOST, PORT = '0.0.0.0', 65000
@@ -98,7 +98,8 @@ class Server:
         self.Server_command_thread.daemon = True
         self.Server_command_thread.start()
         self.open_server()
-        self.imu_calibration()
+        self.Start_sensors()
+        # self.imu_calibration()
         self.Handle_server_activity()
         
         #self.start_QTM()
