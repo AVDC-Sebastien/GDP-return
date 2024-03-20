@@ -137,7 +137,7 @@ class save_tuning_data:
 if __name__ == "__main__":
     save = save_tuning_data()
     save.save_Qualisys([1,1,1])
-    save.save_Lidar([2,2])
+    save.save_Lidar(np.array([2,2]))
     save.save_Camera_TOP([3,3,4,[3,2,3,2,3,2]])
     save.save_Camera_BOT([3,3,4,[3,2,3,2,3,2]])
     save.save_imu([0,[1,4.1,4.1],[4.2,4.2,4.2],[4.3,4.3,4.3]])
