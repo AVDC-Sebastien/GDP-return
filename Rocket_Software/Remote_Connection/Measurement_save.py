@@ -29,9 +29,12 @@ class save_tuning_data:
     def save_Lidar(self,Lidar = [0,0], time = 0):
         self.Lidar = np.append(self.Lidar,np.array((time,Lidar),dtype=[(save_tuning_data.TIME,float),(save_tuning_data.DATA,float,(1,2))]))
 
-    def save_Camera(self,Camera = [[0,0,0],[0,0,0]], time = 0):
+    def save_Camera_TOP(self,Camera = [[0,0,0],[0,0,0]], time = 0):
         self.Camera = np.append(self.Camera,np.array((time,Camera),dtype=[(save_tuning_data.TIME,float),(save_tuning_data.DATA,float,(2,3))]))
 
+    def save_Camera_BOT(self,Camera = [[0,0,0],[0,0,0]], time = 0):
+        self.Camera = np.append(self.Camera,np.array((time,Camera),dtype=[(save_tuning_data.TIME,float),(save_tuning_data.DATA,float,(2,3))]))
+    
     def save_imu(self, imu = [[0,0,0],[0,0,0],[0,0,0]], time = 0):
         self.imu = np.append(self.imu,np.array((time,imu),dtype=[(save_tuning_data.TIME,float),(save_tuning_data.DATA,float,(3,3))]))
 
@@ -39,15 +42,18 @@ class save_tuning_data:
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
         np.save(folder_path + r"\Qualisys_data.csv",self.Qualisys)
-        np.save(folder_path + r"\Camera_data.csv",self.Camera)
+        np.save(folder_path + r"\Camera_data_top.csv",self.Camera)
+        np.save(folder_path + r"\Camera_data_bot.csv",self.Camera)
         np.save(folder_path + r"\Lidar_data.csv",self.Lidar)
         np.save(folder_path + r"\imu_data.csv",self.imu)
 
     def load_all(self, folder_path):
             self.Qualisys = np.load(folder_path + r"\Qualisys_data.csv")
-            self.Camera = np.load(folder_path + r"\Camera_data.csv")
+            self.Camera = np.load(folder_path + r"\Camera_data_top.csv")
+            self.Camera = np.load(folder_path + r"\Camera_data_bot.csv")
             self.Lidar = np.load(folder_path + r"\Lidar_data.csv")
             self.imu = np.load(folder_path + r"\imu_data.csv")
+    
     def save_state_UAV(self,uav_state):
         np.append([self.uav_state],[uav_state],axis=0)
     # x,y,z,velocity,euler
@@ -112,7 +118,7 @@ if __name__ == "__main__":
     save = save_tuning_data()
     save.save_Qualisys([1,1,1],0)
     save.save_Lidar([2,2],0)
-    save.save_Camera([[3,3,3],[3.2,3.2,3.2]])
+    save.save_Camera_TOP([[3,3,3],[3.2,3.2,3.2]])
     save.save_imu([[4.1,4.1,4.1],[4.2,4.2,4.2],[4.3,4.3,4.3]])
     print(save)
     save.save_all()
