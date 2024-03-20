@@ -77,6 +77,9 @@ void setup() {
 
 void loop() {
 
+  // Read Serial
+
+
   // Control Loop
   controlLoop();
   
@@ -129,18 +132,18 @@ void controlLoop() {
   while (micros() < lastControlMicros + 20000);
   lastControlMicros = micros();
 
-  rollRatePID.Compute();
   rollPID.Compute();
+  rollRatePID.Compute();
 
-  pitchRatePID.Compute();
   pitchPID.Compute();
+  pitchRatePID.Compute();
 
-  yawRatePID.Compute();
   yawPID.Compute();
+  yawRatePID.Compute();
 
-  accZPID.Compute();
-  velZPID.Compute();
   posZPID.Compute();
+  velZPID.Compute();
+  accZPID.Compute();
 
 }
 
