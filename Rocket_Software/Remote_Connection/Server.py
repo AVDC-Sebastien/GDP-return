@@ -499,7 +499,7 @@ class Server:
             time.sleep(1)
         self.print_client("... CALIBRATED")
         time.sleep(1)
-
+ 
         self.print_client("sensor -text==gyro")
         while not sensor.calibration_status[1] == 3:
             # Calibration Dance Step Three: Gyroscope
