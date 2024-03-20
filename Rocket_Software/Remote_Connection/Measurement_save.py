@@ -32,27 +32,27 @@ class save_tuning_data:
     def save_Qualisys(self,Qualisys = [0,0,0], time : float = 0):
         self.Qualisys = np.append(self.Qualisys,np.array((time,Qualisys),dtype=[(save_tuning_data.TIME,float),(save_tuning_data.DATA,float,(1,3))]))
 
-    def save_Lidar(self,Lidar_Time = [0,0]): 
+    def save_Lidar(self,Lidar_Time): 
         '''
-        [valeur,temps] array
+        [valeur,temps] 
         '''
         self.Lidar = np.append(self.Lidar,(Lidar_Time))
 
-    def save_Camera_TOP(self,Camera : list = [0,0,0,[0,0,0,0,0,0]]):
+    def save_Camera_TOP(self,Camera):
         '''
-        [T, id, n, [0,0,0,0,0,0]]
+        [T, id, n, [x, y, z, yaw, pitch, roll]]
         '''
         self.Camera_TOP = np.append(self.Camera_TOP,np.array(tuple(Camera),dtype=[(save_tuning_data.TIME,float),(save_tuning_data.ID,float),(save_tuning_data.N,float),(save_tuning_data.DATA,float,(6))]))
 
-    def save_Camera_BOT(self,Camera = [0,0,[0,0,0,0,0,0]]):
+    def save_Camera_BOT(self,Camera):
         '''
-        [T, id, n, [0,0,0,0,0,0]]
+        [T, id, n, [x, y, z, yaw, pitch, roll]]
         '''
         self.Camera_BOT = np.append(self.Camera_BOT,np.array(tuple(Camera),dtype=[(save_tuning_data.TIME,float),(save_tuning_data.ID,float),(save_tuning_data.N,float),(save_tuning_data.DATA,float,(6))]))
     
-    def save_imu(self, imu = [0,[0,0,0],[0,0,0],[0,0,0]]):
+    def save_imu(self, imu):
         '''
-        [temps,[0,0,0],[0,0,0],[0,0,0]] 
+        [temps,[psi, theta, phi],[psi_dot, theta_dot, phi_dot],[acc_x, acc_y, acc_z]] 
         '''
         self.imu = np.append(self.imu,np.array(tuple(imu),dtype=[(save_tuning_data.TIME,float),(save_tuning_data.EULER,float,(3)),(save_tuning_data.ANGULAR_RATE,float,(3)),(save_tuning_data.ACCELERATION,float,(3))]))
     # endregion
