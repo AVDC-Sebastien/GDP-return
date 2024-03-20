@@ -13,6 +13,7 @@ from scipy.spatial.transform import Rotation as R
 from numpy.linalg import inv
 from time import sleep
 from picamera2 import Picamera2
+import copy
 
 
 class sensor_fusion():
@@ -117,6 +118,7 @@ class sensor_fusion():
                                 [0,0,0,0,0,0.2]])
 
         self.initial_state_uav = np.matrix([[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]])
+
         self.P_uav = np.matrix([[2,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                         [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0],
                         [0,0,2,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -133,18 +135,42 @@ class sensor_fusion():
                         [0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
                         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,2]]) 
         self.dt = 0.01
-        self.state_uav = self.initial_state_uav.transpose()
+        self.uav_state = self.initial_state_uav.transpose()
 
-        self.initial_markers = np.matrix([[0,0,0]])
-        self.P_marker = np.matrix([[1,0,0],
+        self.initial_markers = np.matrix([[0,0,0],
+                                          [1,1,1],
+                                          [2,2,2],
+                                          [3,3,3]])
+
+        # self.P_markers = np.matrix([[1,0,0],
+        #                     [0,1,0],
+        #                     [0,0,1]])
+        num_markers = 10
+        self.P_markers_dict = {}
+        for i in range(num_markers):
+        # Simulation : Ajouter une ligne avec ID, numéro d'incrémentation, temps et valeurs aléatoires
+            new_row = [i,  # ID
+                    np.matrix([[1,0,0],
                             [0,1,0],
-                            [0,0,1]])
-        self.state_markers = self.initial_markers.transpose()
+                            [0,0,1]])] # Valeurs (simulées ici) converties en liste
+
+            # Extraire l'ID et le temps de la nouvelle ligne
+            marker_id = new_row[0]
+
+            # Vérifier si l'ID existe déjà dans le dictionnaire
+            if marker_id not in self.P_markers_dict:
+                self.P_markers_dict[marker_id] = {}
+
+            # Ajouter la nouvelle ligne dans le dictionnaire interne correspondant à l'ID
+            self.P_markers_dict[marker_id] = new_row
+
+        self.state_markers = self.initial_markers
+
         self.Q_markers =np.matrix([[0.01,0,0],
                             [0,0.01,0],
                             [0,0,0.01]])
 
-        self.dt_acceptable = 0.01
+        self.dt_acceptable = 1
 
         self.imu_measurement = 0
         self.lidar_measurement = 0
@@ -178,7 +204,8 @@ class sensor_fusion():
         self.get_camera_below_meas = 0
         self.get_lidar_meas =0
 
-        # endregion
+        # print task init
+        self.true_uav_position = [0,0,0]
 
         
     def state_function(self,state_uav, dt):
@@ -189,15 +216,15 @@ class sensor_fusion():
         euler = np.transpose(np.radians(np.matrix(state_uav[6:9])))
         euler_deg = np.transpose(np.matrix(state_uav[6:9]))
         angular_rate = np.transpose(np.matrix(state_uav[9:12]))
-        linear_acceleration = np.transpose(np.matrix(state_uav[12:15]))
+        linear_acceleration = np.matrix(state_uav[12:15])
         ax = linear_acceleration[0,0]
-        ay = linear_acceleration[0,1]
-        az = linear_acceleration[0,2]
+        ay = linear_acceleration[1,0]
+        az = linear_acceleration[2,0]
         w1 = np.degrees(angular_rate[0,0])
         w2 = np.degrees(angular_rate[0,1])
         w3 = np.degrees(angular_rate[0,2])
         
-
+        
         R_imu_abs = np.matrix([
                                     [np.cos(euler[0,1])*np.cos(euler[0,0]), np.cos(euler[0,1])*np.sin(euler[0,0]), -np.sin(euler[0,1])],
                                     [np.sin(euler[0,2])*np.sin(euler[0,1])*np.cos(euler[0,0])-np.cos(euler[0,2])*np.sin(euler[0,0]),  np.sin(euler[0,2])*np.sin(euler[0,1])*np.sin(euler[0,0])+np.cos(euler[0,2])*np.cos(euler[0,0]),  np.sin(euler[0,2])*np.cos(euler[0,1])],
@@ -213,11 +240,12 @@ class sensor_fusion():
         euler_dot = (1/(np.cos(euler[0,1])))*B_theta @ angular_rate.transpose()
         position = position.transpose() + velocity.transpose()*dt
 
-        velocity = velocity.transpose() + (R_imu_abs@linear_acceleration.transpose())*dt
+        velocity = velocity.transpose() + (R_imu_abs@linear_acceleration)*dt
 
         estimated_euler = euler_deg.transpose() + euler_dot.transpose()*dt
     
-        estimated_state_uav = np.array([[position[0,0], position[1,0], position[2,0],velocity[0,0], velocity[1,0], velocity[2,0], estimated_euler[0,0], estimated_euler[1,0], estimated_euler[2,0], angular_rate[0,0], angular_rate[0,1], angular_rate[0,2],linear_acceleration[0,0], linear_acceleration[0,1], linear_acceleration[0,2]]])
+        estimated_state_uav = np.array([[position[0,0], position[1,0], position[2,0],velocity[0,0], velocity[1,0], velocity[2,0], estimated_euler[0,0], estimated_euler[1,0], estimated_euler[2,0], angular_rate[0,0], angular_rate[0,1], angular_rate[0,2],linear_acceleration[0,0], linear_acceleration[1,0], linear_acceleration[2,0]]])
+        estimated_state_uav = estimated_state_uav.transpose()
 
         F47 = (-np.cos(euler[0,1])*np.sin(euler[0,0])*ax + np.cos(euler[0,1])*np.cos(euler[0,0])*ay)*dt
         F48 = (-np.sin(euler[0,1])*np.cos(euler[0,0])*ax - np.sin(euler[0,1])*np.sin(euler[0,0])*ay - np.cos(euler[0,1])*az)*dt
@@ -279,14 +307,14 @@ class sensor_fusion():
         K = (Pp @ H.transpose())*inv(S)
         residual = z.transpose() - h.transpose()
         #update
-        update_state = predicted_state_uav.transpose() + K*residual
+        update_state = predicted_state_uav + K*residual
         P = Pp - K @ S @ K.transpose()
 
         return update_state, P
     def imu_measurement_matrix(self,estimated_state_uav):
 
         h = np.array([
-                        [estimated_state_uav[0,6], estimated_state_uav[0,7], estimated_state_uav[0,8], estimated_state_uav[0,9], estimated_state_uav[0,10], estimated_state_uav[0,11], estimated_state_uav[0,12], estimated_state_uav[0,13], estimated_state_uav[0,14] ]
+                        [estimated_state_uav[6,0], estimated_state_uav[7,0], estimated_state_uav[8,0], estimated_state_uav[9,0], estimated_state_uav[10,0], estimated_state_uav[11,0], estimated_state_uav[12,0], estimated_state_uav[13,0], estimated_state_uav[14,0] ]
                         ])
         H = np.array([
                         [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -302,31 +330,45 @@ class sensor_fusion():
 
         return h, H
     def lidar_measurement_matrix(self,estimated_state_uav):
-        x_z = estimated_state_uav[2]
-        pitch = np.radians(estimated_state_uav[7])
-        roll = np.radians(estimated_state_uav[8])
+        x_z = estimated_state_uav[2,0]
+        # print(x_z)
+        pitch = np.radians(estimated_state_uav[7,0])
+        roll = np.radians(estimated_state_uav[8,0])
 
         h = (x_z/(np.cos(pitch)*np.cos(roll)))
 
         H = np.array([
-                        [0, 0, 1/(np.cos(pitch)*np.cos(roll)), 0, 0, 0,
-                        0, np.cos(roll)*np.sin(pitch)/((np.cos(pitch)*np.cos(roll))**2), np.cos(pitch)*np.sin(roll)/((np.cos(pitch)*np.cos(roll))**2),
-                        0, 0, 0, 0, 0, 0]
+                        [0, 0, 1/(np.cos(pitch)*np.cos(roll)), 0, 0, 0, 0, np.cos(roll)*np.sin(pitch)/((np.cos(pitch)*np.cos(roll))**2), np.cos(pitch)*np.sin(roll)/((np.cos(pitch)*np.cos(roll))**2), 0, 0, 0, 0, 0, 0]
                     ])
 
         return h, H
 
     def camera_markers_measurement(self,state_uav, state_markers, offset, offset_angle) :
-        yaw = state_uav[6]
-        pitch = state_uav[7]
-        roll = state_uav[8]
-        euler_rad = np.array([[yaw, pitch, roll]])
-        euler = np.radians(euler_rad)
+        # print(state_uav)
+        # state_uav = np.squeeze(np.asarray(state_uav))
+        # offset = np.squeeze(np.asarray(offset))
+        # yaw = np.squeeze(np.asarray(state_uav[6]))
+        # pitch = np.squeeze(np.asarray(state_uav[7]))
+        # roll =np.squeeze(np.asarray(state_uav[8]))
+        
+        # euler_rad = np.array([yaw, pitch, roll])
+        # euler = np.radians(euler_rad)
+        euler = np.transpose(np.radians(np.matrix(state_uav[6:9])))
+        yaw = euler[0,0]
+        pitch = euler[0,1]
+        roll = euler[0,2]
+        position = np.transpose(np.matrix(state_uav[0:3]))
+        
+#         print("euler",euler)
+#         print("test", [[np.cos(euler[0,1])*np.cos(euler[0,0]), np.cos(euler[0,1])*np.sin(euler[0,0]), -np.sin(euler[0,1])],
+#                                     [np.sin(euler[0,2])*np.sin(euler[0,1])*np.cos(euler[0,0])-np.cos(euler[0,2])*np.sin(euler[0,0]),  np.sin(euler[0,2])*np.sin(euler[0,1])*np.sin(euler[0,0])+np.cos(euler[0,2])*np.cos(euler[0,0]),  np.sin(euler[0,2])*np.cos(euler[0,1])],
+#                                     [np.cos(euler[0,2])*np.sin(euler[0,1])*np.cos(euler[0,0])+np.sin(euler[0,2])*np.sin(euler[0,0]),  np.cos(euler[0,2])*np.sin(euler[0,1])*np.sin(euler[0,0])-np.sin(euler[0,2])*np.cos(euler[0,0]),  np.cos(euler[0,2])*np.cos(euler[0,1])]
+#  ] )
         R_imu_abs = np.matrix([
-                                    [np.cos(euler[1])*np.cos(euler[0]), np.cos(euler[1])*np.sin(euler[0]), -np.sin(euler[1])],
-                                    [np.sin(euler[2])*np.sin(euler[1])*np.cos(euler[0])-np.cos(euler[2])*np.sin(euler[0]),  np.sin(euler[2])*np.sin(euler[1])*np.sin(euler[0])+np.cos(euler[2])*np.cos(euler[0]),  np.sin(euler[2])*np.cos(euler[1])],
-                                    [np.cos(euler[2])*np.sin(euler[1])*np.cos(euler[0])+np.sin(euler[2])*np.sin(euler[0]),  np.cos(euler[2])*np.sin(euler[1])*np.sin(euler[0])-np.sin(euler[2])*np.cos(euler[0]),  np.cos(euler[2])*np.cos(euler[1])]
-            ])
+                                    [np.cos(euler[0,1])*np.cos(euler[0,0]), np.cos(euler[0,1])*np.sin(euler[0,0]), -np.sin(euler[0,1])],
+                                    [np.sin(euler[0,2])*np.sin(euler[0,1])*np.cos(euler[0,0])-np.cos(euler[0,2])*np.sin(euler[0,0]),  np.sin(euler[0,2])*np.sin(euler[0,1])*np.sin(euler[0,0])+np.cos(euler[0,2])*np.cos(euler[0,0]),  np.sin(euler[0,2])*np.cos(euler[0,1])],
+                                    [np.cos(euler[0,2])*np.sin(euler[0,1])*np.cos(euler[0,0])+np.sin(euler[0,2])*np.sin(euler[0,0]),  np.cos(euler[0,2])*np.sin(euler[0,1])*np.sin(euler[0,0])-np.sin(euler[0,2])*np.cos(euler[0,0]),  np.cos(euler[0,2])*np.cos(euler[0,1])]
+      ])      
         
         # camera_angle = np.radians(-90)
         alpha = np.radians(offset_angle)
@@ -358,11 +400,13 @@ class sensor_fusion():
         offset_y = offset[1]
         offset_z = offset[2]
 
-        meas_x = state_uav[0]+offset_x-state_markers[0]
-        meas_y = state_uav[1]+offset_y-state_markers[1]
-        meas_z = state_uav[2]+offset_z-state_markers[2]
+        # print("state markers",state_markers)
 
-        estimation = np.array([
+        meas_x = position[0,0]+offset_x-state_markers[0,0]
+        meas_y = position[0,1]+offset_y-state_markers[0,1]
+        meas_z = position[0,2]+offset_z-state_markers[0,2]
+
+        estimation = np.matrix([
             [meas_x, meas_y, meas_z, euler_cam_x, euler_cam_y, euler_cam_z]
         ])
     
@@ -371,9 +415,9 @@ class sensor_fusion():
                                 [ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                                 [ 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                                 [ 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                [0, 0, 0, 0, 0, 0, -(((np.real(np.cos(yaw)*np.cos(roll)) + np.imag(np.cos(pitch)*np.sin(yaw)) + np.real(np.sin(yaw)*np.sin(pitch)*np.sin(roll)))/(np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw))) + ((np.imag(np.cos(yaw)*np.cos(pitch)) + np.real(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) - np.real(np.cos(roll)*np.sin(yaw)))*(np.imag(np.cos(yaw)*np.cos(roll)) + np.imag(np.sin(yaw)*np.sin(pitch)*np.sin(roll)) - np.real(np.cos(pitch)*np.sin(yaw))))/(np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw)))^2)*(np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw)))^2)/((np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw)))^2 + (np.imag(np.cos(yaw)*np.cos(pitch)) + np.real(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) - np.real(np.cos(roll)*np.sin(yaw)))^2), (((np.real(np.cos(yaw)*np.cos(pitch)*np.sin(roll)) - np.imag(np.cos(yaw)*np.sin(pitch)))/(np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw))) + ((np.imag(np.cos(yaw)*np.cos(pitch)*np.sin(roll)) + np.real(np.cos(yaw)*np.sin(pitch)))*(np.imag(np.cos(yaw)*np.cos(pitch)) + np.real(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) - np.real(np.cos(roll)*np.sin(yaw))))/(np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw)))^2)*(np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw)))^2)/((np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw)))^2 + (np.imag(np.cos(yaw)*np.cos(pitch)) + np.real(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) - np.real(np.cos(roll)*np.sin(yaw)))^2), (((np.real(np.cos(yaw)*np.cos(roll)*np.sin(pitch)) + np.real(np.sin(yaw)*np.sin(roll)))/(np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw))) + ((np.imag(np.cos(yaw)*np.cos(roll)*np.sin(pitch)) + np.imag(np.sin(yaw)*np.sin(roll)))*(np.imag(np.cos(yaw)*np.cos(pitch)) + np.real(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) - np.real(np.cos(roll)*np.sin(yaw))))/(np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw)))^2)*(np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw)))^2)/((np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw)))^2 + (np.imag(np.cos(yaw)*np.cos(pitch)) + np.real(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) - np.real(np.cos(roll)*np.sin(yaw)))^2), 0, 0, 0, 0, 0, 0],
-                                [ 0, 0, 0, 0, 0, 0, -(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))/np.sqrt(1 - (np.sin(yaw)*np.sin(roll) + np.cos(yaw)*np.cos(pitch)*np.cos(roll))^2), (np.cos(yaw)*np.cos(roll)*np.sin(pitch))/np.sqrt(1 - (np.sin(yaw)*np.sin(roll) + np.cos(yaw)*np.cos(pitch)*np.cos(roll))^2), -(np.cos(roll)*np.sin(yaw) - np.cos(yaw)*np.cos(pitch)*np.sin(roll))/np.sqrt(1 - (np.sin(yaw)*np.sin(roll) + np.cos(yaw)*np.cos(pitch)*np.cos(roll))^2), 0, 0, 0, 0, 0, 0],
-                                [ 0, 0, 0, 0, 0, 0, (((np.real(np.cos(alpha)*(np.sin(yaw)*np.sin(roll) + np.cos(yaw)*np.cos(pitch)*np.cos(roll))) + np.imag(np.sin(alpha)*(np.sin(yaw)*np.sin(roll) + np.cos(yaw)*np.cos(pitch)*np.cos(roll))))/(np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll))) - ((np.imag(np.cos(alpha)*(np.sin(yaw)*np.sin(roll) + np.cos(yaw)*np.cos(pitch)*np.cos(roll))) - np.real(np.sin(alpha)*(np.sin(yaw)*np.sin(roll) + np.cos(yaw)*np.cos(pitch)*np.cos(roll))))*(np.real(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.imag(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.imag(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.real(np.sin(alpha)*np.cos(pitch)*np.cos(roll))))/(np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))^2)*(np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))^2)/((np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))^2 + (np.real(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.imag(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.imag(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.real(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))^2), -(((np.real(np.cos(alpha)*np.cos(roll)*np.sin(yaw)*np.sin(pitch)) + np.imag(np.sin(alpha)*np.cos(roll)*np.sin(yaw)*np.sin(pitch)) + np.imag(np.cos(alpha)*np.cos(roll)*np.sin(pitch)) - np.real(np.sin(alpha)*np.cos(roll)*np.sin(pitch)))/(np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll))) + ((np.real(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.imag(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.imag(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.real(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))*(np.real(np.sin(alpha)*np.cos(roll)*np.sin(yaw)*np.sin(pitch)) - np.imag(np.cos(alpha)*np.cos(roll)*np.sin(yaw)*np.sin(pitch)) + np.real(np.cos(alpha)*np.cos(roll)*np.sin(pitch)) + np.imag(np.sin(alpha)*np.cos(roll)*np.sin(pitch))))/(np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))^2)*(np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))^2)/((np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))^2 + (np.real(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.imag(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.imag(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.real(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))^2), -(((np.real(np.cos(alpha)*(np.cos(yaw)*np.cos(roll) + np.cos(pitch)*np.sin(yaw)*np.sin(roll))) + np.imag(np.sin(alpha)*(np.cos(yaw)*np.cos(roll) + np.cos(pitch)*np.sin(yaw)*np.sin(roll))) + np.imag(np.cos(alpha)*np.cos(pitch)*np.sin(roll)) - np.real(np.sin(alpha)*np.cos(pitch)*np.sin(roll)))/(np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll))) + ((np.real(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.imag(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.imag(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.real(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))*(np.real(np.sin(alpha)*(np.cos(yaw)*np.cos(roll) + np.cos(pitch)*np.sin(yaw)*np.sin(roll))) - np.imag(np.cos(alpha)*(np.cos(yaw)*np.cos(roll) + np.cos(pitch)*np.sin(yaw)*np.sin(roll))) + np.real(np.cos(alpha)*np.cos(pitch)*np.sin(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.sin(roll))))/(np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))^2)*(np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))^2)/((np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))^2 + (np.real(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.imag(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.imag(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.real(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))^2), 0, 0, 0, 0, 0, 0]
+                                [0, 0, 0, 0, 0, 0, -(((np.real(np.cos(yaw)*np.cos(roll)) + np.imag(np.cos(pitch)*np.sin(yaw)) + np.real(np.sin(yaw)*np.sin(pitch)*np.sin(roll)))/(np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw))) + ((np.imag(np.cos(yaw)*np.cos(pitch)) + np.real(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) - np.real(np.cos(roll)*np.sin(yaw)))*(np.imag(np.cos(yaw)*np.cos(roll)) + np.imag(np.sin(yaw)*np.sin(pitch)*np.sin(roll)) - np.real(np.cos(pitch)*np.sin(yaw))))/(np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw)))**2)*(np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw)))**2)/((np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw)))**2 + (np.imag(np.cos(yaw)*np.cos(pitch)) + np.real(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) - np.real(np.cos(roll)*np.sin(yaw)))**2), (((np.real(np.cos(yaw)*np.cos(pitch)*np.sin(roll)) - np.imag(np.cos(yaw)*np.sin(pitch)))/(np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw))) + ((np.imag(np.cos(yaw)*np.cos(pitch)*np.sin(roll)) + np.real(np.cos(yaw)*np.sin(pitch)))*(np.imag(np.cos(yaw)*np.cos(pitch)) + np.real(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) - np.real(np.cos(roll)*np.sin(yaw))))/(np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw)))**2)*(np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw)))**2)/((np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw)))**2 + (np.imag(np.cos(yaw)*np.cos(pitch)) + np.real(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) - np.real(np.cos(roll)*np.sin(yaw)))**2), (((np.real(np.cos(yaw)*np.cos(roll)*np.sin(pitch)) + np.real(np.sin(yaw)*np.sin(roll)))/(np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw))) + ((np.imag(np.cos(yaw)*np.cos(roll)*np.sin(pitch)) + np.imag(np.sin(yaw)*np.sin(roll)))*(np.imag(np.cos(yaw)*np.cos(pitch)) + np.real(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) - np.real(np.cos(roll)*np.sin(yaw))))/(np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw)))**2)*(np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw)))**2)/((np.real(np.cos(yaw)*np.cos(pitch)) - np.imag(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) + np.imag(np.cos(roll)*np.sin(yaw)))**2 + (np.imag(np.cos(yaw)*np.cos(pitch)) + np.real(np.cos(yaw)*np.sin(pitch)*np.sin(roll)) - np.real(np.cos(roll)*np.sin(yaw)))**2), 0, 0, 0, 0, 0, 0],
+                                [ 0, 0, 0, 0, 0, 0, -(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))/np.sqrt(1 - (np.sin(yaw)*np.sin(roll) + np.cos(yaw)*np.cos(pitch)*np.cos(roll))**2), (np.cos(yaw)*np.cos(roll)*np.sin(pitch))/np.sqrt(1 - (np.sin(yaw)*np.sin(roll) + np.cos(yaw)*np.cos(pitch)*np.cos(roll))**2), -(np.cos(roll)*np.sin(yaw) - np.cos(yaw)*np.cos(pitch)*np.sin(roll))/np.sqrt(1 - (np.sin(yaw)*np.sin(roll) + np.cos(yaw)*np.cos(pitch)*np.cos(roll))**2), 0, 0, 0, 0, 0, 0],
+                                [ 0, 0, 0, 0, 0, 0, (((np.real(np.cos(alpha)*(np.sin(yaw)*np.sin(roll) + np.cos(yaw)*np.cos(pitch)*np.cos(roll))) + np.imag(np.sin(alpha)*(np.sin(yaw)*np.sin(roll) + np.cos(yaw)*np.cos(pitch)*np.cos(roll))))/(np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll))) - ((np.imag(np.cos(alpha)*(np.sin(yaw)*np.sin(roll) + np.cos(yaw)*np.cos(pitch)*np.cos(roll))) - np.real(np.sin(alpha)*(np.sin(yaw)*np.sin(roll) + np.cos(yaw)*np.cos(pitch)*np.cos(roll))))*(np.real(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.imag(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.imag(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.real(np.sin(alpha)*np.cos(pitch)*np.cos(roll))))/(np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))**2)*(np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))**2)/((np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))**2 + (np.real(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.imag(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.imag(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.real(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))**2), -(((np.real(np.cos(alpha)*np.cos(roll)*np.sin(yaw)*np.sin(pitch)) + np.imag(np.sin(alpha)*np.cos(roll)*np.sin(yaw)*np.sin(pitch)) + np.imag(np.cos(alpha)*np.cos(roll)*np.sin(pitch)) - np.real(np.sin(alpha)*np.cos(roll)*np.sin(pitch)))/(np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll))) + ((np.real(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.imag(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.imag(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.real(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))*(np.real(np.sin(alpha)*np.cos(roll)*np.sin(yaw)*np.sin(pitch)) - np.imag(np.cos(alpha)*np.cos(roll)*np.sin(yaw)*np.sin(pitch)) + np.real(np.cos(alpha)*np.cos(roll)*np.sin(pitch)) + np.imag(np.sin(alpha)*np.cos(roll)*np.sin(pitch))))/(np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))**2)*(np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))**2)/((np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))**2 + (np.real(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.imag(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.imag(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.real(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))**2), -(((np.real(np.cos(alpha)*(np.cos(yaw)*np.cos(roll) + np.cos(pitch)*np.sin(yaw)*np.sin(roll))) + np.imag(np.sin(alpha)*(np.cos(yaw)*np.cos(roll) + np.cos(pitch)*np.sin(yaw)*np.sin(roll))) + np.imag(np.cos(alpha)*np.cos(pitch)*np.sin(roll)) - np.real(np.sin(alpha)*np.cos(pitch)*np.sin(roll)))/(np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll))) + ((np.real(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.imag(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.imag(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.real(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))*(np.real(np.sin(alpha)*(np.cos(yaw)*np.cos(roll) + np.cos(pitch)*np.sin(yaw)*np.sin(roll))) - np.imag(np.cos(alpha)*(np.cos(yaw)*np.cos(roll) + np.cos(pitch)*np.sin(yaw)*np.sin(roll))) + np.real(np.cos(alpha)*np.cos(pitch)*np.sin(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.sin(roll))))/(np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))**2)*(np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))**2)/((np.imag(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.real(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.real(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.imag(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))**2 + (np.real(np.cos(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) + np.imag(np.sin(alpha)*(np.cos(yaw)*np.sin(roll) - np.cos(pitch)*np.cos(roll)*np.sin(yaw))) - np.imag(np.cos(alpha)*np.cos(pitch)*np.cos(roll)) + np.real(np.sin(alpha)*np.cos(pitch)*np.cos(roll)))**2), 0, 0, 0, 0, 0, 0]
                                 ])
         H_markers = np.array([
             [-1, 0, 0],
@@ -386,33 +430,44 @@ class sensor_fusion():
 
         return h_camera,H_camera, H_markers
 
-    def slam(self,id_max, max_increment, camera_top_dict, uav_state, F_uav, P_uav, Q_uav, state_markers, P_markers, F_markers, Q_markers, R, offset, offset_angle):
+    def slam(self,id_max, max_increment, camera_dict, uav_state, F_uav, P_uav, Q_uav, state_markers, P_markers, F_markers, Q_markers, R, offset, offset_angle):
 
         for value in id_max:
-            mesure = camera_top_dict[value][max_increment][3][0]
+            # print("top dic cam:", camera_dict)
+            # print("value",value)
+            # print("max incrementation", max_increment)
+            mesure = camera_dict[value][max_increment][3][0]
             z = np.array([
                                             [mesure[0], mesure[1], mesure[2], mesure[3], mesure[4], mesure[5]]
                                         ])
             #------------EKF SLAM----------------------------------------------------------
             #loop for each landmarks detected
             #markers estimation
-            Ppredicted_markers = F_markers*P_markers[value]*F_markers.transpose() + Q_markers
-            h_markers, H_camera, H_markers = self.camera_markers_measurement(state_markers,uav_state, offset, offset_angle)
-            S_markers = H_markers*Ppredicted_markers*H_markers.transpose() + R
-            K_markers = Ppredicted_markers*H_markers.transpose()/S_markers
+            state_markers_fonction = state_markers[value,:]
+            Ppredicted_markers = F_markers@P_markers[value][1]@F_markers.transpose() + Q_markers
+            h_markers, H_camera, H_markers = self.camera_markers_measurement(uav_state, state_markers_fonction, offset, offset_angle)
+            S_markers = H_markers@Ppredicted_markers@H_markers.transpose() + R
+            K_markers = (Ppredicted_markers@H_markers.transpose())@inv(S_markers)
             #residual, verifier comment on le fait
-            residual_markers = z-h_markers  #verifier a bien faire la transpose si necessaire
+            residual_markers = z.transpose() - h_markers  #verifier a bien faire la transpose si necessaire
 
-            state_markers[value]= state_markers[value] + K_markers*residual_markers
-            P_markers[value] = Ppredicted_markers - K_markers*H_markers*Ppredicted_markers.transpose()
+            # print("z",z)
+            # print("h markers", h_markers)
+            # print("k markers", K_markers)
+            # print("state", state_markers[value,:])
+
+            state_markers[value,:]= state_markers[value,:] + (K_markers@residual_markers).transpose()
+            P_markers[value][1] = Ppredicted_markers - K_markers@H_markers@Ppredicted_markers.transpose()
+
+            # print("apres transpose", state_markers[value,:])
 
             #uav estimation
-            Ppredicted_uav = F_uav*P_uav*F_uav.transpose() + Q_uav 
-            h_camera, H_camera, H_markers = self.camera_markers_measurement(uav_state, state_markers,offset, offset_angle)
-            S_uav = H_camera*Ppredicted_uav*H_camera.transpose() + R
-            K_uav = Ppredicted_uav*H_camera.transpose/S_uav
+            Ppredicted_uav = F_uav@P_uav@F_uav.transpose() + Q_uav 
+            h_camera, H_camera, H_markers = self.camera_markers_measurement(uav_state, state_markers_fonction, offset, offset_angle)
+            S_uav = H_camera@Ppredicted_uav@H_camera.transpose() + R
+            K_uav = (Ppredicted_uav@H_camera.transpose())@inv(S_uav)
             #faire residual uav
-            residual_uav = z-h_camera
+            residual_uav = z.transpose() - h_camera
 
             uav_state = uav_state + K_uav*residual_uav
             P_uav = Ppredicted_uav - K_uav*H_camera*Ppredicted_uav.transpose()
@@ -427,10 +482,13 @@ class sensor_fusion():
         self.camera_top_thread = threading.Thread(target=self.camera_top_task, args=[self.get_camera_top_meas])
         self.camera_below_thread = threading.Thread(target=self.camera_below_task, args=[self.get_camera_top_meas])
         self.lidar_thread = threading.Thread(target=self.lidar_task, args=[self.get_lidar_meas])
+        # self.print_thread = threading.Thread(target=self.print_task)
+
         self.imu_thread.start()
         self.camera_top_thread.start()
         self.camera_below_thread.start()
         self.lidar_thread.start()
+        # self.print_thread.start()
         
     def Stop_measurement(self):
         self.stop_measurement_thread = True
@@ -445,34 +503,64 @@ class sensor_fusion():
         P_uav = self.P_uav
         while not self.stop_main_sensor_thread:
             t1 = time.time()
-            camera_top_dict = self.get_camera_top_meas
-            camera_below_dict = self.get_camera_below_meas
-            imu_measurement = self.get_imu_meas
-            lidar_measurement = self.get_lidar_meas
+            if type(self.get_camera_top_meas) != int:
+                camera_top_dict = copy.deepcopy(self.get_camera_top_meas)
+            else:
+                camera_top_dict = 0
+            if type(self.get_camera_below_meas) != int:
+                camera_below_dict = copy.deepcopy(self.get_camera_below_meas)
+            else:
+                camera_below_dict = 0
+            if type(self.get_imu_meas) != int:
+                imu_measurement = self.get_imu_meas[:]
+            else:
+                imu_measurement=0
+            if type(self.get_lidar_meas) != int:
+                lidar_measurement = self.get_lidar_meas.copy()
+            else:
+                lidar_measurement=0
+            # print("cam meas",camera_top_dict)
+            # print("cam b meas", camera_below_dict)
+            # print("imu meas",imu_measurement)
+            # print("lidar meas",self.get_lidar_meas)
+            # print("type 1",type(imu_measurement))
+            # print("time meas", imu_measurement[0][0])
 
             if type(imu_measurement) != int:  
+                
                 if t1-self.dt_acceptable <= imu_measurement[0][0] <= t1+self.dt_acceptable: 
+                    # print("sebastien ne sait pas")
                     imu_measurement = np.array([
                                                     [imu_measurement[1][0], imu_measurement[1][1], imu_measurement[1][2], imu_measurement[2][0], imu_measurement[2][1], imu_measurement[2][2], imu_measurement[3][0], imu_measurement[3][1], imu_measurement[3][2]]
                                                     ])
+                    
                 else:
                     imu_measurement = 0
+            # print("meas imu apres if", imu_measurement)
+            # print("type",type(imu_measurement))
+                    
+            ############################################## LIDAR ###################################################################
 
             if type(lidar_measurement) != int:  
+                # print("temps lidar",lidar_measurement[1])
                 if t1-self.dt_acceptable <= lidar_measurement[1] <= t1+self.dt_acceptable: 
                     lidar_measurement = lidar_measurement[0]
                 else:
                     lidar_measurement = 0
-            if type(camera_top_dict) != int :
-                max_increment = max((increment for inner_dict in camera_top_dict.values() for increment in inner_dict), default=None)
+            # print("lidar apres if", lidar_measurement)
+
+            ############################################# CAMERA TOP  ############################################################       
+
+            if type(camera_top_dict) != int and camera_top_dict != {}:
+                max_increment_t = max((increment for inner_dict in camera_top_dict.values() for increment in inner_dict), default=None)
 
                 # Trouver tous les IDs ayant la valeur maximale d'incrémentation
-                id_max = [id for id, inner_dict in camera_top_dict.items() if max_increment in inner_dict]
+                id_max = [id for id, inner_dict in camera_top_dict.items() if max_increment_t in inner_dict]
             else:
                 id_max = []
                 
             if id_max != []:   
-                t = camera_top_dict[id_max[0]][max_increment][2]
+                t = camera_top_dict[id_max[0]][max_increment_t][2]
 
                 if t1-self.dt_acceptable <= t <= t1+self.dt_acceptable:
                     camera_top_measurement = camera_top_dict
@@ -480,18 +568,19 @@ class sensor_fusion():
                     camera_top_measurement = 0  
             else:
                 camera_top_measurement = 0
-            
-            if type(camera_below_dict) != int:
+            ###########################################CAMERA BELOW #############################################################
 
-                max_increment = max((increment for inner_dict in camera_below_dict.values() for increment in inner_dict), default=None)
+            if type(camera_below_dict) != int and camera_below_dict != {}:
+
+                max_increment_b = max((increment for inner_dict in camera_below_dict.values() for increment in inner_dict), default=None)
 
                 # Trouver tous les IDs ayant la valeur maximale d'incrémentation
-                id_max = [id for id, inner_dict in camera_below_dict.items() if max_increment in inner_dict]
+                id_max = [id for id, inner_dict in camera_below_dict.items() if max_increment_b in inner_dict]
             else:
                 id_max = []
 
             if id_max != []:   
-                t = camera_below_dict[id_max[0]][max_increment][2]
+                t = camera_below_dict[id_max[0]][max_increment_b][2]
 
                 if t1-self.dt_acceptable <= t <= t1+self.dt_acceptable:
                     camera_below_measurement = camera_below_dict
@@ -525,30 +614,39 @@ class sensor_fusion():
             else:
                 situation = 0
                 dt=self.dt
-
-            uav_state, F, F_markers = self.state_function(self.state_uav, dt)
+            
+            # print("avant fct state:",self.uav_state)
+            self.uav_state, F, F_markers = self.state_function(self.uav_state, dt)
+            
 
             if type(imu_measurement) != int:
 
-                h_imu, H_imu = self.imu_measurement_matrix(uav_state)
-                uav_state, P_uav = self.EKF_filter(imu_measurement,h_imu, H_imu, uav_state, F, self.Q_imu, self.R_imu, P_uav)
-
+                h_imu, H_imu = self.imu_measurement_matrix(self.uav_state)
+                
+                self.uav_state, self.P_uav = self.EKF_filter(imu_measurement,h_imu, H_imu, self.uav_state, F, self.Q_imu, self.R_imu, self.P_uav)
+                # print("apres imu", self.uav_state)
             if type(lidar_measurement) != int:
 
-                h_lidar, H_lidar = self.lidar_measurement_matrix(uav_state)
-                uav_state, P_uav = self.EKF_filter(lidar_measurement,h_lidar, H_lidar, uav_state, F, self.Q_lidar, self.R_lidar, P_uav)  
+                h_lidar, H_lidar = self.lidar_measurement_matrix(self.uav_state)
+                
+                self.uav_state, self.P_uav = self.EKF_filter(lidar_measurement,h_lidar, H_lidar, self.uav_state, F, self.Q_lidar, self.R_lidar, self.P_uav)  
+                # print("apres lidar", self.uav_state)
 
             if type(camera_top_measurement) != int:  
-
-                uav_state, P_uav, state_markers, P_markers = self.slam(id_max, max_increment, camera_top_measurement, uav_state, F, P_uav, self.Q_camera_top, state_markers, P_markers, F_markers, self.Q_markers, self.R_camera_top, self.offset_imu_camera_top, self.offset_angle_top )
+                
+                self.uav_state, self.P_uav, self.state_markers, self.P_markers_dict = self.slam(id_max, max_increment_t, camera_top_measurement, self.uav_state, F, self.P_uav, self.Q_camera_top, self.state_markers, self.P_markers_dict, F_markers, self.Q_markers, self.R_camera_top, self.offset_imu_camera_top, self.offset_angle_top )
+            #print("apres camtop", self.uav_state)
+            #print("type camera", type(camera_below_measurement))   
 
             if type(camera_below_measurement) != int:  
-
-                uav_state, P_uav, state_markers, P_markers = self.slam(id_max, max_increment, camera_top_measurement, uav_state, F, P_uav, self.Q_camera_below, state_markers, P_markers, F_markers, self.Q_markers, self.R_camera_below, self.offset_imu_camera_below, self.offset_angle_below )  
-
+                # print("avantle slam",self.uav_state)
+                # print("camera dic avant le slam below", camera_below_measurement)
+                self.uav_state, self.P_uav, self.state_markers, self.P_markers_dict = self.slam(id_max, max_increment_b, camera_below_measurement, self.uav_state, F, self.P_uav, self.Q_camera_below, self.state_markers, self.P_markers_dict, F_markers, self.Q_markers, self.R_camera_below, self.offset_imu_camera_below, self.offset_angle_below )  
+                # print("apres cambelow", self.uav_state)
             # Mettre à jour le temps pour la prochaine itération
-            true_uav_position = uav_state
-            print(true_uav_position)
+            # self.uav_state = self.uav_state.transpose()
+            self.true_uav_position = self.uav_state
+            print("resultat",self.uav_state)
 
             imu_measurement = 0
             lidar_measurement = 0
@@ -558,22 +656,29 @@ class sensor_fusion():
             t2 = time.time()
             dt = t2-t1
             if situation==1:
-                dt_imu_lidar_camera = dt
+                self.dt_imu_lidar_camera = dt
             elif situation ==2:
-                dt_imu_lidar =dt
+                self.dt_imu_lidar =dt
             elif situation ==3:
-                dt_imu_camera = dt
+                self.dt_imu_camera = dt
             elif situation ==4:
-                dt_lidar_camera = dt
+                self.dt_lidar_camera = dt
             elif situation ==5:
-                dt_imu = dt
+                self.dt_imu = dt
             elif situation ==6:
-                dt_lidar = dt
+                self.dt_lidar = dt
             elif situation ==7:
-                dt_camera = dt
+                self.dt_camera = dt
             
+            # for threa in threading.enumerate():
+            #     print(threa.name)
            #!/usr/bin/env python
-
+                
+    # #def print_task(self):
+    #     while True:
+    #         # print(self.true_uav_position)
+    #         # time.sleep(1)
+    #         pass
 
     def camera_top_task(self, get_camera_top_meas):
         #region setup
@@ -653,7 +758,7 @@ class sensor_fusion():
         
         # Start the video stream
         # cap = cv2.VideoCapture(0)
-        cap = Picamera2(1)
+        cap = Picamera2(0)
         cap.start()
         sleep(2)
         n=0
@@ -684,7 +789,7 @@ class sensor_fusion():
             # Detect ArUco markers in the video frame
             (corners, marker_ids, rejected) = cv2.aruco.detectMarkers(
             frame, this_aruco_dictionary, parameters=this_aruco_parameters)
-            
+            n=n+1
             # Check that at least one ArUco marker was detected
             if marker_ids is not None:
 
@@ -705,7 +810,7 @@ class sensor_fusion():
                 # x-axis points to the right
                 # y-axis points straight down towards your toes
                 # z-axis points straight ahead away from your eye, out of the camera
-                n=n+1
+                
                 for i, marker_id in enumerate(marker_ids):
                     marker_id = marker_id[0]
                     # Store the translation (i.e. position) information
@@ -758,10 +863,10 @@ class sensor_fusion():
 
                     # Afficher le résultat
                     if last_three_increments_exist:
+                        removed_data = measurement_dict.pop(marker_id, None)  
                         if current_id not in measurement_dict:
                             measurement_dict[current_id] = {}
-                        removed_data = measurement_dict.pop(marker_id, None)  
-                        measurement_dict[current_id][incrementation]= new_row
+                        measurement_dict[current_id][incrementation] = new_row
                     self.get_camera_top_meas = measurement_dict
 
                     # print(marker_id)
@@ -873,7 +978,7 @@ class sensor_fusion():
         
         # Start the video stream
         # cap = cv2.VideoCapture(0)
-        cap = Picamera2(0)
+        cap = Picamera2(1)
         cap.start()
         sleep(2)
         n=0
@@ -903,7 +1008,7 @@ class sensor_fusion():
             # Detect ArUco markers in the video frame
             (corners, marker_ids, rejected) = cv2.aruco.detectMarkers(
             frame, this_aruco_dictionary, parameters=this_aruco_parameters)
-            
+            n=n+1
             # Check that at least one ArUco marker was detected
             if marker_ids is not None:
 
@@ -924,7 +1029,7 @@ class sensor_fusion():
                 # x-axis points to the right
                 # y-axis points straight down towards your toes
                 # z-axis points straight ahead away from your eye, out of the camera
-                n=n+1
+                
                 for i, marker_id in enumerate(marker_ids):
                     marker_id = marker_id[0]
                     # Store the translation (i.e. position) information
@@ -978,11 +1083,12 @@ class sensor_fusion():
 
                     # Afficher le résultat
                     if last_three_increments_exist:
+                        removed_data = measurement_dict.pop(marker_id, None)  
                         if current_id not in measurement_dict:
                             measurement_dict[current_id] = {}
-                        removed_data = measurement_dict.pop(marker_id, None)  
                         measurement_dict[current_id][incrementation]= new_row
                     self.get_camera_below_meas = measurement_dict
+                    # print("dic from cam", measurement_dict)
 
                     # print(marker_id)
                     # print("transform_translation_x: {}".format(transform_translation_x))
@@ -1017,7 +1123,7 @@ class sensor_fusion():
                     
 
         # Exécution des threads en arrière-plan
-
+    
     def imu_task(self, get_imu_meas, target_angle_offset):
         #region
         i2c = board.I2C()  # uses board.SCL and board.SDA  attention c'est celui la que j'ai commente
@@ -1070,9 +1176,9 @@ class sensor_fusion():
             # shared_data["imu_measurement"] = imu_data
             
     def lidar_task(self,get_lidar_meas):
-
+        # print("lidar 11")
         GPIO.setmode(GPIO.BCM)
-
+        
         # print "+-----------------------------------------------------------+"
         # print "|   Mesure de distance par le capteur ultrasonore HC-SR04   |"
         # print "+-----------------------------------------------------------+"
@@ -1082,27 +1188,53 @@ class sensor_fusion():
 
         GPIO.setup(Trig,GPIO.OUT)
         GPIO.setup(Echo,GPIO.IN)
-
+        
         GPIO.output(Trig, False)
+        first_time = True
         while not self.stop_measurement_thread:
-
+            # print("lidar 22")
             GPIO.output(Trig, True)
             time.sleep(0.00001)
             GPIO.output(Trig, False)
-            t1 = time.time()
+            p=0
+            pp=0
+            myStartingTime =time.time()
             while GPIO.input(Echo)==0:  ## Emission de l'ultrason
-                debutImpulsion = time.time()
+                calculation_starting_time = time.time()
+                p=0
+                if calculation_starting_time - myStartingTime > 1:
+                    p=99
+                    break
+                start = time.time()
 
-            while GPIO.input(Echo)==1:   ## Retour de l'Echo
-                finImpulsion = time.time()
+            if p != 99:
 
-            distance = round((finImpulsion - debutImpulsion) * 340 * 100 / 2, 1)  ## Vitesse du son = 340 m/s
-            self.get_lidar_meas = np.array([
-                                        [distance*100],
-                                        [t1]
-                                        ])
+                while GPIO.input(Echo)==1:   ## Retour de l'Echo
+                    calculation_starting_time = time.time()
+                    pp=0
+                    if calculation_starting_time - myStartingTime > 1:
+                        pp=99
+                        break
+                    
+                    end = time.time()
+
+                if pp !=99:
+                    if first_time:
+                        time.sleep(0.2)
+                        first_time = False
+                   
+                    distance = round((end - start) * 340 * 100 / 2, 1)  ## Vitesse du son = 340 m/s
+
+                    # print("lidar 33")
+                    t1 = time.time()
+                    self.get_lidar_meas = np.array([
+                                                [distance*100],
+                                                [t1]
+                                                ])
+            
+              
             #print ("La distance est de : ",distance," cm, mesure:",x)
-
+        
         GPIO.cleanup()
 
 
