@@ -98,8 +98,8 @@ class Server:
         self.Server_command_thread.daemon = True
         self.Server_command_thread.start()
         self.open_server()
-        self.Start_sensors()
-        # self.imu_calibration()
+        #self.Start_sensors()
+        self.imu_calibration()
         self.Handle_server_activity()
         
         #self.start_QTM()
@@ -475,7 +475,7 @@ class Server:
         sensor.mode = Mode.NDOF_MODE  # Set the sensor to NDOF_MODE
 
         self.print_client("sensor -text==magnetometer")
-        if not sensor.calibration_status[3] == 3:
+        while not sensor.calibration_status[3] == 3:
             # Calibration Dance Step One: Magnetometer
             #   Move sensor away from magnetic interference or shields
             #   Perform the figure-eight until calibrated
@@ -485,7 +485,7 @@ class Server:
         time.sleep(1)
 
         self.print_client("sensor -text==accel")
-        if not sensor.calibration_status[2] == 3:
+        while not sensor.calibration_status[2] == 3:
             # Calibration Dance Step Two: Accelerometer
             #   Place sensor board into six stable positions for a few seconds each:
             #    1) x-axis right, y-axis up,    z-axis away
@@ -501,7 +501,7 @@ class Server:
         time.sleep(1)
 
         self.print_client("sensor -text==gyro")
-        if not sensor.calibration_status[1] == 3:
+        while not sensor.calibration_status[1] == 3:
             # Calibration Dance Step Three: Gyroscope
             #  Place sensor in any stable position for a few seconds
             #  (Accelerometer calibration may also calibrate the gyro)

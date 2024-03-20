@@ -14,7 +14,7 @@ from numpy.linalg import inv
 from time import sleep
 from picamera2 import Picamera2
 import copy
-from Rocket_Software.Remote_Connection.Measurement_save import save_tuning_data
+from Measurement_save import save_tuning_data
 
 
 class sensor_fusion():
