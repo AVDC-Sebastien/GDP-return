@@ -11,6 +11,7 @@ pip_list = {
     "opencv-contrib-python",
     "scipy",
     "--upgrade --force-reinstall adafruit-blinka"
+    "matplotlib"
 }
 
 git_list = {
