@@ -1,0 +1,4 @@
+Vcc == Pin 2
+Trig == Pin 16
+Echo == Pin 18
+Gnd == Pin 6

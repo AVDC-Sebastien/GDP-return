@@ -133,7 +133,6 @@ class save_tuning_data:
             plt.axes.set_title("Position from Qualisys and State")
             plt.axes(projection='3d').plot3D(self.uav_state[:,0],self.uav_state[:,1],self.uav_state[:,2],'blue')
         return("Qualisys: "+ str(self.Qualisys)+"\nLidar: "+str(self.Lidar)+"\nCamera top: "+str(self.Camera_TOP)+"\nCamera bot: "+str(self.Camera_BOT)+"\nImu : "+str(self.imu))
-        #return str([self.Qualisys,self.Lidar,self.Camera_TOP,self.Camera_BOT,self.imu])
 
 if __name__ == "__main__":
     save = save_tuning_data()
