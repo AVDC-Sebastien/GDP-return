@@ -9,6 +9,7 @@ import adafruit_bno055
 import numpy as np
 from ESP32_Com import ESP32
 import Sensor_fusion as Sensors
+import Measurement_save as save
 
 
 HOST, PORT = '0.0.0.0', 65000
@@ -24,7 +25,7 @@ class Server:
         Initialize the server with the define host and port, and a fixed size message
         '''
         # Create the log file
-        logging.basicConfig(filename="GDP_retrun_server.log", level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S',force=True)   
+        logging.basicConfig(filename="GDP_retrun_server.log", level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S',force=True)   
 
         # Create a TCP socket
         self.__sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)     
@@ -53,6 +54,8 @@ class Server:
         self.__tolerance = 0.1
         self.__qtm_position = []
         self.__qtm_rotation = []
+        self.stop_save_qtm = False
+
 
         # ESP32
         try:
@@ -66,6 +69,7 @@ class Server:
         self.Emergency_landing = False
         
         # Sensors
+        self.save_data = save.save_tuning_data()
         self.euler_offset = 0
         self.calibration = False
         self.calibration_done = False
@@ -173,11 +177,7 @@ class Server:
             while (not self.__needs_to_stop_sending_gs) and self.isServerrunning:            
                 if self.msg_to_send != "":
                     self.ground_station.sendall(str(self.msg_to_send).encode())
-                if self.__isQTM_connected:
-                    self.test = self.__qtm_position
-                    self.test = self.test * 4
-                    print("true pos:",self.__qtm_position)
-                    print("test",self.test)
+
         except:
                 if self.__needs_to_stop_sending_gs and not self.isServerrunning:
                     self.log_and_print("Stopped sending",Server.INFO)
@@ -263,7 +263,7 @@ class Server:
                     self.sensor_offset = 'y'
                 else:
                     self.sensor_offset = 'n'
-                    self.sensor_offset_done = False
+                    self.sensor_offset_done = True
 
             case "sensor -Off_P":
                 self.sensor_pitch_offset = float(msg.split("==")[1])
@@ -291,7 +291,17 @@ class Server:
 
             case "control -calibration":
                 self.ground_station.sendall(str(self.euler_angle).encode())
-
+            case "save -all":
+                self.ground_station.sendall(str("save").encode())
+                self.Stop_sensors()
+                self.stop_save_qtm = True
+                time.sleep(1)
+                self.save_data.save_Qualisys_to_file()
+                self.log_and_print("Saving the data")
+                self.sensors.save_data_to_file()
+            case "active thread":
+                for thread in threading.enumerate():
+                    print(thread)
             case _:
                 if self.print_received_data and self.isGround_station_connected:
                     self.log_and_print(f"Message received from {self.name} : " + msg)
@@ -399,6 +409,10 @@ class Server:
                 pos = np.array([bodies[0][0].x,bodies[0][0].y,bodies[0][0].z])
                 rot = np.array(bodies[0][1].matrix)
                 self.__qtm_position, self.__qtm_rotation = pos,rot
+                if not self.stop_save_qtm:
+                    self.save_data.save_Qualisys(self.__qtm_position,self.__qtm_rotation,time.time())
+                
+
 
             await connection.stream_frames(components=["6d"], on_packet=on_packet)
             await self.__disconnect_QTM.wait()

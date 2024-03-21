@@ -1,11 +1,12 @@
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+import logging
 
 class save_tuning_data:
     
     def __init__(self) -> None:
-        self.Qualisys = np.array([],dtype=[(save_tuning_data.TIME,float),(save_tuning_data.DATA,float,(1,3))])
+        self.Qualisys = np.array([],dtype=[(save_tuning_data.TIME,float),(save_tuning_data.DATA,float,(12,))])
         self.Lidar = np.array([])
         self.Camera_TOP = np.array([],dtype=[(save_tuning_data.TIME,float),(save_tuning_data.ID,float),(save_tuning_data.N,float),(save_tuning_data.DATA,float,(6))])
         self.Camera_BOT = np.array([],dtype=[(save_tuning_data.TIME,float),(save_tuning_data.ID,float),(save_tuning_data.N,float),(save_tuning_data.DATA,float,(6))])
@@ -29,8 +30,15 @@ class save_tuning_data:
     ACCELERATION = 'acceleration'
 
     #region Save
-    def save_Qualisys(self,Qualisys = [0,0,0], time : float = 0):
-        self.Qualisys = np.append(self.Qualisys,np.array((time,Qualisys),dtype=[(save_tuning_data.TIME,float),(save_tuning_data.DATA,float,(1,3))]))
+    def save_Qualisys(self,Qualisys = [0,0,0],angle =[0,0,0,0,0,0,0,0,0], time : float = 0):
+        '''
+        [data] et time
+        '''
+        try:
+            temp = np.append(Qualisys,angle)
+            self.Qualisys = np.append(self.Qualisys,np.array((time,temp),dtype=[(save_tuning_data.TIME,float),(save_tuning_data.DATA,float,(12,))]))
+        except:
+            print("grrr")
 
     def save_Lidar(self,Lidar_Time): 
         '''
@@ -56,15 +64,41 @@ class save_tuning_data:
         '''
         self.imu = np.append(self.imu,np.array(tuple(imu),dtype=[(save_tuning_data.TIME,float),(save_tuning_data.EULER,float,(3)),(save_tuning_data.ANGULAR_RATE,float,(3)),(save_tuning_data.ACCELERATION,float,(3))]))
     # endregion
-    
+        
+    def save_Qualisys_to_file(self):
+        try:
+            print(self.Qualisys)
+            np.save(r"\Qualisys_data",self.Qualisys)
+            print(np.load(r"\Qualisys_data.npy"))
+            print("\033[93msaved")
+        except:
+            print("Couldn't save Qualisys")
+            logging("Couldn't save Qualisys")
+
     def save_all(self, folder_path : str = r"\Rocket_Software\saved_measurement"): 
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
-        np.save(folder_path + r"\Qualisys_data.csv",self.Qualisys)
-        np.save(folder_path + r"\Lidar_data.csv",self.Lidar)
-        np.save(folder_path + r"\Camera_data_top.csv",self.Camera_TOP)
-        np.save(folder_path + r"\Camera_data_bot.csv",self.Camera_BOT)
-        np.save(folder_path + r"\imu_data.csv",self.imu)
+        try:
+            np.save(folder_path + r"\Lidar_data.csv",self.Lidar)
+        except:
+            print("Couldn't save Lidar")
+            logging("Couldn't save Lidar")
+        try:
+            np.save(folder_path + r"\Camera_data_top.csv",self.Camera_TOP)
+        except:
+            print("Couldn't save Camera top")
+            logging("Couldn't save Camera top")
+        try:
+            np.save(folder_path + r"\Camera_data_bot.csv",self.Camera_BOT)
+        except:
+            print("Couldn't save Camera bot")
+            logging("Couldn't save Camera bot")
+        try:
+            np.save(folder_path + r"\imu_data",self.imu)
+        except:
+            print("Couldn't save imu")
+            logging("Couldn't save imu")
+        
 
     def load_all(self, folder_path):
             self.Qualisys = np.load(folder_path + r"\Qualisys_data.csv")
@@ -136,7 +170,7 @@ class save_tuning_data:
 
 if __name__ == "__main__":
     save = save_tuning_data()
-    save.save_Qualisys([1,1,1])
+    save.save_Qualisys(np.array([1,3,1]),np.array([3,4,6,4,2,1,9,8,3]),0)
     save.save_Lidar(np.array([2,2]))
     save.save_Camera_TOP([3,3,4,[3,2,3,2,3,2]])
     save.save_Camera_BOT([3,3,4,[3,2,3,2,3,2]])

@@ -1,9 +1,11 @@
 import numpy as np
 
-print(np.array(((0,0,[0,0,0,0,0,0])),dtype=[('TIME',float),('ID',int),('DATA',float,(6))]))
-def save_Camera_TOP(Camera : list = [0,0,0,[0,0,0,0,0,0]]):
+def save_Qualisys(Qualisys=[0,0,0], a = [0,0,0,0,0,0], time: float = 0):
     '''
-    [T, id, n, [0,0,0,0,0,0]]
+    [data] et time
     '''
-    print(np.array(tuple(Camera),dtype=[('TIME',float),('ID',float),('N',float),('DATA',float,(6))]))
-save_Camera_TOP([0,0,0,[0,0,0,0,0,0]])
+    data_array = np.array((time, Qualisys,a), dtype=[('TIME', float), ('DATA', float, (3,)), ('angle', float, (6,))])
+    print(np.append(data_array,np.array((time, Qualisys,a), dtype=[('TIME', float), ('DATA', float, (3,)), ('angle', float, (6,))])))
+    print(data_array)
+
+save_Qualisys([0,0,0],[0,0,0,0,0,0],4)

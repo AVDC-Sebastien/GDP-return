@@ -13,14 +13,16 @@ from scipy.spatial.transform import Rotation as R
 from numpy.linalg import inv
 from time import sleep
 from picamera2 import Picamera2
-import copy
 from Measurement_save import save_tuning_data
 
 
 class sensor_fusion():
 
     def __init__(self,target_angle_offset):
+        
         self.save_data = save_tuning_data()
+        self.saving_data = True
+
         self.stop_main_sensor_thread = False
         self.stop_measurement_thread = False
 
@@ -493,34 +495,46 @@ class sensor_fusion():
         # self.print_thread.start()
         
     def Stop_measurement(self):
+        self.saving_data = False
+        self.save_data.save_all()
+        time.sleep(10)
         self.stop_measurement_thread = True
         self.stop_main_sensor_thread = True
         self.imu_thread.join()
         self.camera_top_thread.join()
         self.camera_below_thread.join()
         self.lidar_thread.join()
+    
+    def save_data_to_file(self):
+        self.save_data.save_all()
+        
+        
 
 # Tâche Principale
     def main_task(self):
         P_uav = self.P_uav
         while not self.stop_main_sensor_thread:
             t1 = time.time()
-            if type(self.get_camera_top_meas) != int:
-                camera_top_dict = copy.deepcopy(self.get_camera_top_meas)
-            else:
-                camera_top_dict = 0
-            if type(self.get_camera_below_meas) != int:
-                camera_below_dict = copy.deepcopy(self.get_camera_below_meas)
-            else:
-                camera_below_dict = 0
-            if type(self.get_imu_meas) != int:
-                imu_measurement = self.get_imu_meas[:]
-            else:
-                imu_measurement=0
-            if type(self.get_lidar_meas) != int:
-                lidar_measurement = self.get_lidar_meas.copy()
-            else:
-                lidar_measurement=0
+            # if type(self.get_camera_top_meas) != int:
+            #     camera_top_dict = copy.deepcopy(self.get_camera_top_meas)
+            # else:
+            #     camera_top_dict = 0
+            # if type(self.get_camera_below_meas) != int:
+            #     camera_below_dict = copy.deepcopy(self.get_camera_below_meas)
+            # else:
+            #     camera_below_dict = 0
+            # if type(self.get_imu_meas) != int:
+            #     imu_measurement = self.get_imu_meas[:]
+            # else:
+            #     imu_measurement=0
+            # if type(self.get_lidar_meas) != int:
+            #     lidar_measurement = self.get_lidar_meas.copy()
+            # else:
+            #     lidar_measurement=0
+            camera_top_dict = 0
+            camera_below_dict = 0
+            imu_measurement = 0
+            lidar_measurement = 0
             # print("cam meas",camera_top_dict)
             # print("cam b meas", camera_below_dict)
             # print("imu meas",imu_measurement)
@@ -648,7 +662,7 @@ class sensor_fusion():
             # Mettre à jour le temps pour la prochaine itération
             # self.uav_state = self.uav_state.transpose()
             self.true_uav_position = self.uav_state
-            print("resultat",self.uav_state)
+            # print("resultat",self.uav_state)
 
             imu_measurement = 0
             lidar_measurement = 0
@@ -845,7 +859,8 @@ class sensor_fusion():
 
                     camera_measurement = np.array([[transform_translation_x, transform_translation_y, transform_translation_z, roll_x, pitch_y, yaw_z]])
                     for_save = [t1, marker_id, n, camera_measurement]
-                    self.save_data.save_Camera_TOP(for_save)
+                    if self.saving_data:
+                        self.save_data.save_Camera_TOP(for_save)
                     new_row = [marker_id,  # ID
                         n,  # Numéro d'incrémentation
                         t1,  # Temps (simulé ici)
@@ -1065,7 +1080,8 @@ class sensor_fusion():
 
                     camera_measurement = np.array([[transform_translation_x, transform_translation_y, transform_translation_z, roll_x, pitch_y, yaw_z]])
                     for_save = [t1, marker_id, n, camera_measurement]
-                    self.save_data.save_Camera_BOT(for_save)
+                    if self.saving_data:
+                        self.save_data.save_Camera_BOT(for_save)
                     new_row = [marker_id,  # ID
                         n,  # Numéro d'incrémentation
                         t1,  # Temps (simulé ici)
@@ -1177,7 +1193,14 @@ class sensor_fusion():
                                     [angular_rate[0], angular_rate[1], angular_rate[2]],
                                     [acceleration[0], acceleration[1], acceleration[2]]
                                     ]
-                    self.save_data.save_imu(self.get_imu_meas)
+                    self.save_get_imu_meas = [
+                                    t,
+                                    [euler[0][0], euler[0][1], euler[0][2]],
+                                    [angular_rate[0], angular_rate[1], angular_rate[2]],
+                                    [acceleration[0], acceleration[1], acceleration[2]]
+                                    ]
+                    if self.saving_data:
+                        self.save_data.save_imu(self.save_get_imu_meas)
             # shared_data["imu_measurement"] = imu_data
             
     def lidar_task(self,get_lidar_meas):
@@ -1233,10 +1256,11 @@ class sensor_fusion():
                     # print("lidar 33")
                     t1 = time.time()
                     self.get_lidar_meas = np.array([
-                                                [distance*100],
+                                                [distance/100],
                                                 [t1]
                                                 ])
-                    self.save_data.save_Lidar(self.get_lidar_meas)
+                    if self.saving_data:
+                        self.save_data.save_Lidar(self.get_lidar_meas)
             
               
             #print ("La distance est de : ",distance," cm, mesure:",x)
