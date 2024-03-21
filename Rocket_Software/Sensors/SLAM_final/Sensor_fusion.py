@@ -141,46 +141,48 @@ class sensor_fusion():
         self.dt = 0.01
         self.uav_state = self.initial_state_uav.transpose()
 
-        initial_markers_qualysis = np.matrix([[607.5, 1565.6, 8.8],
-                                    [29,1998.7, 5.5],
-                                    [-1468.4, 2105.7, 3.4],
-                                    [-3074, 3399, 1],
-                                    [-2361.7, 1334.1, 2.6],
-                                    [-3543.4, 607.3, 0.5],
-                                    [-2062.4, 380.7, 4.5],
-                                    [55, -570.6, 10],
-                                    [-806.5, -366.9, 11.6],
-                                    [-887.2, 1373.4, 6.7],
-                                    [-471.7, 373.6, 10],
-                                    [-2984, 1456.5, 0.5],
-                                    [-2754, 2465.4, -1.2],
-                                    [543.5, 795.4, 4.6],
-                                    [-1242, 871, 7.3],
-                                    [-1315.9, -414.3, 13],
-                                    [-2811.7, -142, 2.5],
-                                    [-1707.6, 1465.5, 1.4],
-                                    [-537.2, 2189.9, 7.4],
-                                    [-168, 1096.4, 7.3]])
-        ref_markers = np.matrix([[607.5, 1565.6, 8.8]])
-        markers_ref_id1_qualysis = initial_markers_qualysis - ref_markers
-        beta = np.radians(90)
-        coordonne = np.zeros((20, 3))
-        R_qual_euler = np.matrix([[np.cos(beta), np.sin(beta), 0],
-                                [-np.sin(beta), np.cos(beta), 0],
-                                [0,0,0]])
-        for i in range(20):
-            popo = np.transpose(np.matrix(markers_ref_id1_qualysis[i,:]))
-            final_vecteur = R_qual_euler @ popo
-            coordonne[i,:] = np.array([
-                [np.transpose(final_vecteur)]
-            ])
+        # initial_markers_qualysis = np.matrix([[607.5, 1565.6, 8.8],
+        #                             [29,1998.7, 5.5],
+        #                             [-1468.4, 2105.7, 3.4],
+        #                             [-3074, 3399, 1],
+        #                             [-2361.7, 1334.1, 2.6],
+        #                             [-3543.4, 607.3, 0.5],
+        #                             [-2062.4, 380.7, 4.5],
+        #                             [55, -570.6, 10],
+        #                             [-806.5, -366.9, 11.6],
+        #                             [-887.2, 1373.4, 6.7],
+        #                             [-471.7, 373.6, 10],
+        #                             [-2984, 1456.5, 0.5],
+        #                             [-2754, 2465.4, -1.2],
+        #                             [543.5, 795.4, 4.6],
+        #                             [-1242, 871, 7.3],
+        #                             [-1315.9, -414.3, 13],
+        #                             [-2811.7, -142, 2.5],
+        #                             [-1707.6, 1465.5, 1.4],
+        #                             [-537.2, 2189.9, 7.4],
+        #                             [-168, 1096.4, 7.3]])
+        # ref_markers = np.matrix([[607.5, 1565.6, 8.8]])
+        # markers_ref_id1_qualysis = initial_markers_qualysis - ref_markers
+        # beta = np.radians(90)
+        # coordonne = np.zeros((20, 3))
+        # R_qual_euler = np.matrix([[np.cos(beta), np.sin(beta), 0],
+        #                         [-np.sin(beta), np.cos(beta), 0],
+        #                         [0,0,0]])
+        # for i in range(20):
+        #     popo = np.transpose(np.matrix(markers_ref_id1_qualysis[i,:]))
+        #     final_vecteur = R_qual_euler @ popo
+        #     coordonne[i,:] = np.array([
+        #         [np.transpose(final_vecteur)]
+        #     ])
         
-        self.initial_markers = np.matrix(coordonne)
+        # self.initial_markers = np.matrix(coordonne)
+        self.initial_markers = np.matrix([[0,3,0],
+                                          [0,0,0]])
 
         # self.P_markers = np.matrix([[1,0,0],
         #                     [0,1,0],
         #                     [0,0,1]])
-        num_markers = 10
+        num_markers = 2
         self.P_markers_dict = {}
         for i in range(num_markers):
         # Simulation : Ajouter une ligne avec ID, numéro d'incrémentation, temps et valeurs aléatoires
@@ -478,7 +480,7 @@ class sensor_fusion():
             #------------EKF SLAM----------------------------------------------------------
             #loop for each landmarks detected
             #markers estimation
-            state_markers_fonction = state_markers[value,:]
+            state_markers_fonction = state_markers[value-1,:]
             Ppredicted_markers = F_markers@P_markers[value][1]@F_markers.transpose() + Q_markers
             h_markers, H_camera, H_markers = self.camera_markers_measurement(uav_state, state_markers_fonction, offset, offset_angle)
             S_markers = H_markers@Ppredicted_markers@H_markers.transpose() + R
@@ -491,7 +493,7 @@ class sensor_fusion():
             # print("k markers", K_markers)
             # print("state", state_markers[value,:])
 
-            state_markers[value,:]= state_markers[value,:] + (K_markers@residual_markers).transpose()
+            state_markers[value-1,:]= state_markers[value-1,:] + (K_markers@residual_markers).transpose()
             P_markers[value][1] = Ppredicted_markers - K_markers@H_markers@Ppredicted_markers.transpose()
 
             # print("apres transpose", state_markers[value,:])
@@ -793,6 +795,10 @@ class sensor_fusion():
         mtx = cv_file.getNode('K').mat()
         dst = cv_file.getNode('D').mat()
         cv_file.release()
+        mtx = np.matrix([[5.682484410751633e+02,0,3.198526929019697e+02],          #aruco cam params
+                   [0,5.689423158702836e+02,2.269844844918011e+02],
+                   [0,0,1]])
+        dst = np.matrix([[-0.234216845902543,0.052261480464537,0,0,-0.022931112954800]])
 
 
         # Load the ArUco dictionary
@@ -1015,6 +1021,10 @@ class sensor_fusion():
         mtx = cv_file.getNode('K').mat()
         dst = cv_file.getNode('D').mat()
         cv_file.release()
+        mtx = np.matrix([[5.706055532684599e+02,0,3.282198582514894e+02],     #camera noir wide params
+        [0,5.690321322616674e+02,2.450640199750066e+02],
+        [0,0,1]])
+        dst = np.matrix([[-0.199154552455924,-0.111666325169893,0,0,0.198132380405577]])
 
         # print(mtx)
         # print(dst)   
