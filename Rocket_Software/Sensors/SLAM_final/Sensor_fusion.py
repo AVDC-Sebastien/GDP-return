@@ -141,10 +141,41 @@ class sensor_fusion():
         self.dt = 0.01
         self.uav_state = self.initial_state_uav.transpose()
 
-        self.initial_markers = np.matrix([[0,0,0],
-                                          [1,1,1],
-                                          [2,2,2],
-                                          [3,3,3]])
+        initial_markers_qualysis = np.matrix([[607.5, 1565.6, 8.8],
+                                    [29,1998.7, 5.5],
+                                    [-1468.4, 2105.7, 3.4],
+                                    [-3074, 3399, 1],
+                                    [-2361.7, 1334.1, 2.6],
+                                    [-3543.4, 607.3, 0.5],
+                                    [-2062.4, 380.7, 4.5],
+                                    [55, -570.6, 10],
+                                    [-806.5, -366.9, 11.6],
+                                    [-887.2, 1373.4, 6.7],
+                                    [-471.7, 373.6, 10],
+                                    [-2984, 1456.5, 0.5],
+                                    [-2754, 2465.4, -1.2],
+                                    [543.5, 795.4, 4.6],
+                                    [-1242, 871, 7.3],
+                                    [-1315.9, -414.3, 13],
+                                    [-2811.7, -142, 2.5],
+                                    [-1707.6, 1465.5, 1.4],
+                                    [-537.2, 2189.9, 7.4],
+                                    [-168, 1096.4, 7.3]])
+        ref_markers = np.matrix([[607.5, 1565.6, 8.8]])
+        markers_ref_id1_qualysis = initial_markers_qualysis - ref_markers
+        beta = np.radians(90)
+        coordonne = np.zeros((20, 3))
+        R_qual_euler = np.matrix([[np.cos(beta), np.sin(beta), 0],
+                                [-np.sin(beta), np.cos(beta), 0],
+                                [0,0,0]])
+        for i in range(20):
+            popo = np.transpose(np.matrix(markers_ref_id1_qualysis[i,:]))
+            final_vecteur = R_qual_euler @ popo
+            coordonne[i,:] = np.array([
+                [np.transpose(final_vecteur)]
+            ])
+        
+        self.initial_markers = np.matrix(coordonne)
 
         # self.P_markers = np.matrix([[1,0,0],
         #                     [0,1,0],
