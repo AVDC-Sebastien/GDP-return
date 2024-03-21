@@ -4,7 +4,7 @@ import time
 import msvcrt
 import os
 
-HOST, PORT = '138.250.151.213', 65000
+HOST, PORT = '138.250.151.140', 65000
 
 class Client:
     

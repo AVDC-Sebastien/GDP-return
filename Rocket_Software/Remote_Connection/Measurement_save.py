@@ -32,7 +32,7 @@ class save_tuning_data:
     #region Save
     def save_Qualisys(self,Qualisys = [0,0,0],angle =[0,0,0,0,0,0,0,0,0], time : float = 0):
         '''
-        [data] et time
+        [position,rotation_matrix] et time
         '''
         try:
             temp = np.append(Qualisys,angle)

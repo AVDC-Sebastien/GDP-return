@@ -50,7 +50,7 @@ class Server:
         self.__connection_password = "gdp-return"
         self.__disconnect_QTM = asyncio.Event()
         self.__isQTM_connected = False
-        self.__qtm_IP = "138.250.154.168"
+        self.__qtm_IP = "138.250.154.88"
         self.__tolerance = 0.1
         self.__qtm_position = []
         self.__qtm_rotation = []
