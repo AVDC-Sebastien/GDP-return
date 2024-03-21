@@ -5,7 +5,7 @@
 %%% REFERENCE POINT - Basically ground level when rocket is idle on the ground
 
 ct_pos = [0 0 0.2]; % Vertical Distance of Centre of Thrust from the reference point
-cg_pos = [0 0 0.7]; % Vertical Distance of Centre of Gravity from the reference point
+cg_pos = [0 0 0.6]; % Vertical Distance of Centre of Gravity from the reference point
 
 Mass = 5; % Mass in kg
 Inertia = diag([0.75 0.75 0.026]);
