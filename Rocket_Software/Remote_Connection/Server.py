@@ -102,8 +102,8 @@ class Server:
         self.Server_command_thread.daemon = True
         self.Server_command_thread.start()
         self.open_server()
-        #self.Start_sensors()
-        self.imu_calibration()
+        self.Start_sensors()
+        #self.imu_calibration()
         self.Handle_server_activity()
         
         #self.start_QTM()

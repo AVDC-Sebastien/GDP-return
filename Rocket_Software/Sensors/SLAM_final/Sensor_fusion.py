@@ -32,9 +32,9 @@ class sensor_fusion():
         # region parameters
         #----Paremeters-------
         #----IMU-------
-        Q1 = 10
-        QV = 50
-        Q2=10
+        Q1 = 1
+        QV = 1
+        Q2= 2
         self.Q = np.matrix([[Q1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                                 [0,Q1,0,0,0,0,0,0,0,0,0,0,0,0,0],
                                 [0,0,Q1,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -51,15 +51,15 @@ class sensor_fusion():
                                 [0,0,0,0,0,0,0,0,0,0,0,0,0,Q2,0],
                                 [0,0,0,0,0,0,0,0,0,0,0,0,0,0,Q2]]) 
 
-        self.R_imu = np.matrix([[0.5,0,0,0,0,0,0,0,0],
-                        [0,0.5,0,0,0,0,0,0,0],
-                        [0,0,0.5,0,0,0,0,0,0],
-                        [0,0,0,0.5,0,0,0,0,0],
-                        [0,0,0,0,0.5,0,0,0,0],
-                        [0,0,0,0,0,0.5,0,0,0],
-                        [0,0,0,0,0,0,5,0,0],
-                        [0,0,0,0,0,0,0,5,0],
-                        [0,0,0,0,0,0,0,0,5]])
+        self.R_imu = np.matrix([[0.05,0,0,0,0,0,0,0,0],
+                        [0,0.05,0,0,0,0,0,0,0],
+                        [0,0,0.05,0,0,0,0,0,0],
+                        [0,0,0,0.2,0,0,0,0,0],
+                        [0,0,0,0,0.2,0,0,0,0],
+                        [0,0,0,0,0,0.2,0,0,0],
+                        [0,0,0,0,0,0,0.2,0,0],
+                        [0,0,0,0,0,0,0,0.2,0],
+                        [0,0,0,0,0,0,0,0,0.2]])
 
         #-----lidar-----
         # self.Q_lidar = np.matrix([[0.3,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -78,7 +78,7 @@ class sensor_fusion():
         #                         [0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
         #                         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,2]]) 
         
-        self.R_lidar = 0.8
+        self.R_lidar = 0.01
 
         #--camera----
         # self.Q_camera_top = np.matrix([[0.3,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -120,15 +120,15 @@ class sensor_fusion():
         #                                 [0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
         #                                 [0,0,0,0,0,0,0,0,0,0,0,0,0,0,2]]) 
         
-        self.R_camera_below = np.matrix([[0.2,0,0,0,0,0],
-                                [0,0.2,0,0,0,0],
-                                [0,0,0.2,0,0,0],
-                                [0,0,0,0.2,0,0],
-                                [0,0,0,0,0.2,0],
-                                [0,0,0,0,0,0.2]])
+        self.R_camera_below = np.matrix([[0.1,0,0,0,0,0],
+                                [0,0.1,0,0,0,0],
+                                [0,0,0.05,0,0,0],
+                                [0,0,0,0.1,0,0],
+                                [0,0,0,0,0.1,0],
+                                [0,0,0,0,0,0.1]])
 
         self.initial_state_uav = np.matrix([[0,0,0.607,0,0,0,0,0,0,0,0,0,0,0,0]])
-        pv=8
+        pv=20
         self.P_uav = np.matrix([[pv,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                         [0,pv,0,0,0,0,0,0,0,0,0,0,0,0,0],
                         [0,0,pv,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -234,10 +234,10 @@ class sensor_fusion():
         self.offset_imu_camera_below = [0.05, 0.0, 0]
         self.offset_angle_top = 90
         self.offset_angle_below = 180
-        self.offset_lidar = [3,3,20]
+        self.offset_lidar = [0.09,0.03,0]
 
         self.target_angle_offset = target_angle_offset
-        self.target_angle_offset = (0,0,0)
+        self.target_angle_offset = (0,-7,0)
 
         self.calibration_faite = 0
 
@@ -276,6 +276,7 @@ class sensor_fusion():
         w1 = np.degrees(angular_rate[0,0])
         w2 = np.degrees(angular_rate[0,1])
         w3 = np.degrees(angular_rate[0,2])
+        print("velocity dans l estimation de state", velocity)
         
         
         R_imu_abs = np.matrix([
@@ -291,11 +292,12 @@ class sensor_fusion():
                             [np.cos(euler[0,1]), np.sin(euler[0,1])*np.sin(euler[0,2]), np.sin(euler[0,1])*np.cos(euler[0,2])]
                             ])
         euler_dot = (1/(np.cos(euler[0,1])))*B_theta @ angular_rate.transpose()
+        print("eleur dot a la main", euler_dot)
         position_e = position.transpose() + velocity.transpose()*dt
 
         velocity_e = velocity.transpose() + (R_imu_abs@linear_acceleration)*dt
 
-        estimated_euler = euler_deg.transpose() + euler_dot.transpose()*dt
+        estimated_euler = np.degrees(euler.transpose() + euler_dot.transpose()*dt)
     
         estimated_state_uav = np.array([[position_e[0,0], position_e[1,0], position_e[2,0],velocity_e[0,0], velocity_e[1,0], velocity_e[2,0], estimated_euler[0,0], estimated_euler[1,0], estimated_euler[2,0], angular_rate[0,0], angular_rate[0,1], angular_rate[0,2],linear_acceleration[0,0], linear_acceleration[1,0], linear_acceleration[2,0]]])
         estimated_state_uav = estimated_state_uav.transpose()
@@ -359,18 +361,46 @@ class sensor_fusion():
         acc_x = linear_acceleration[0,0]
         acc_y = linear_acceleration[1,0]
         acc_z = linear_acceleration[2,0]
-        omega_1 = np.degrees(angular_rate[0,0])
-        omega_2 = np.degrees(angular_rate[0,1])
-        omega_3 = np.degrees(angular_rate[0,2])  
+        omega_1 = angular_rate[0,0]
+        omega_2 = angular_rate[0,1]
+        omega_3 = angular_rate[0,2] 
         theta_1 = euler[0,0] 
         theta_2 = euler[0,1] 
         theta_3 = euler[0,2] 
 
         state_estimated = np.matrix([
-            [pos_x + dt*vel_x],[ pos_y + dt*vel_y],[ pos_z + dt*vel_z],[ vel_x + dt*(acc_x*np.cos(theta_1)*np.cos(theta_2) - acc_z*np.sin(theta_2) + acc_y*np.cos(theta_2)*np.sin(theta_1))],[ vel_y + dt*(acc_y*(np.cos(theta_1)*np.cos(theta_3) + np.sin(theta_1)*np.sin(theta_2)*np.sin(theta_3)) - acc_x*(np.cos(theta_3)*np.sin(theta_1) - np.cos(theta_1)*np.sin(theta_2)*np.sin(theta_3)) + acc_z*np.cos(theta_2)*np.sin(theta_3))],[ vel_z + dt*(acc_x*(np.sin(theta_1)*np.sin(theta_3) + np.cos(theta_1)*np.cos(theta_2)*np.cos(theta_3)) - acc_y*(np.cos(theta_1)*np.sin(theta_3) - np.cos(theta_2)*np.cos(theta_3)*np.sin(theta_1)) + acc_z*np.cos(theta_2)*np.cos(theta_3))],[ theta_1 + dt*((omega_3*np.cos(theta_3))/np.cos(theta_2) + (omega_2*np.sin(theta_3))/np.cos(theta_2))],[ theta_2 + dt*(omega_2*np.cos(theta_3) - omega_3*np.sin(theta_3))],[ theta_3 + dt*(omega_1 + (omega_3*np.cos(theta_3)*np.sin(theta_2))/np.cos(theta_2) + (omega_2*np.sin(theta_2)*np.sin(theta_3))/np.cos(theta_2))],[ omega_1],[ omega_2],[ omega_3],[ acc_x],[ acc_y],[ acc_z]
+            [pos_x + dt*vel_x],
+            [ pos_y + dt*vel_y],
+            [ pos_z + dt*vel_z],
+            [ vel_x + dt*(acc_x*np.cos(theta_1)*np.cos(theta_2) - acc_z*np.sin(theta_2) + acc_y*np.cos(theta_2)*np.sin(theta_1))],
+            [ vel_y + dt*(acc_y*(np.cos(theta_1)*np.cos(theta_3) + np.sin(theta_1)*np.sin(theta_2)*np.sin(theta_3)) - acc_x*(np.cos(theta_3)*np.sin(theta_1) - np.cos(theta_1)*np.sin(theta_2)*np.sin(theta_3)) + acc_z*np.cos(theta_2)*np.sin(theta_3))],
+            [ vel_z + dt*(acc_x*(np.sin(theta_1)*np.sin(theta_3) + np.cos(theta_1)*np.cos(theta_2)*np.cos(theta_3)) - acc_y*(np.cos(theta_1)*np.sin(theta_3) - np.cos(theta_2)*np.cos(theta_3)*np.sin(theta_1)) + acc_z*np.cos(theta_2)*np.cos(theta_3))],
+            [ np.degrees(theta_1 + dt*((omega_3*np.cos(theta_3))/np.cos(theta_2) + (omega_2*np.sin(theta_3))/np.cos(theta_2)))],
+            [ np.degrees(theta_2 + dt*(omega_2*np.cos(theta_3) - omega_3*np.sin(theta_3)))],
+            [ np.degrees(theta_3 + dt*(omega_1 + (omega_3*np.cos(theta_3)*np.sin(theta_2))/np.cos(theta_2) + (omega_2*np.sin(theta_2)*np.sin(theta_3))/np.cos(theta_2)))],
+            [ omega_1],
+            [ omega_2],
+            [ omega_3],
+            [ acc_x],
+            [ acc_y],
+            [ acc_z]
         ])
         F_matlab = np.matrix([
-            [1, 0, 0, dt, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],[ 0, 1, 0, 0, dt, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],[ 0, 0, 1, 0, 0, dt, 0, 0, 0, 0, 0, 0, 0, 0, 0],[ 0, 0, 0, 1, 0, 0, dt*(acc_y*np.cos(theta_1)*np.cos(theta_2) - acc_x*np.cos(theta_2)*np.sin(theta_1)), -dt*(acc_z*np.cos(theta_2) + acc_x*np.cos(theta_1)*np.sin(theta_2) + acc_y*np.sin(theta_1)*np.sin(theta_2)), 0, 0, 0, 0, dt*np.cos(theta_1)*np.cos(theta_2), dt*np.cos(theta_2)*np.sin(theta_1), -dt*np.sin(theta_2)],[ 0, 0, 0, 0, 1, 0, -dt*(acc_x*(np.cos(theta_1)*np.cos(theta_3) + np.sin(theta_1)*np.sin(theta_2)*np.sin(theta_3)) + acc_y*(np.cos(theta_3)*np.sin(theta_1) - np.cos(theta_1)*np.sin(theta_2)*np.sin(theta_3))), dt*(acc_x*np.cos(theta_1)*np.cos(theta_2)*np.sin(theta_3) - acc_z*np.sin(theta_2)*np.sin(theta_3) + acc_y*np.cos(theta_2)*np.sin(theta_1)*np.sin(theta_3)), dt*(acc_x*(np.sin(theta_1)*np.sin(theta_3) + np.cos(theta_1)*np.cos(theta_3)*np.sin(theta_2)) - acc_y*(np.cos(theta_1)*np.sin(theta_3) - np.cos(theta_3)*np.sin(theta_1)*np.sin(theta_2)) + acc_z*np.cos(theta_2)*np.cos(theta_3)), 0, 0, 0, -dt*(np.cos(theta_3)*np.sin(theta_1) - np.cos(theta_1)*np.sin(theta_2)*np.sin(theta_3)), dt*(np.cos(theta_1)*np.cos(theta_3) + np.sin(theta_1)*np.sin(theta_2)*np.sin(theta_3)), dt*np.cos(theta_2)*np.sin(theta_3)],[ 0, 0, 0, 0, 0, 1, dt*(acc_x*(np.cos(theta_1)*np.sin(theta_3) - np.cos(theta_2)*np.cos(theta_3)*np.sin(theta_1)) + acc_y*(np.sin(theta_1)*np.sin(theta_3) + np.cos(theta_1)*np.cos(theta_2)*np.cos(theta_3))), -dt*(acc_z*np.cos(theta_3)*np.sin(theta_2) + acc_x*np.cos(theta_1)*np.cos(theta_3)*np.sin(theta_2) + acc_y*np.cos(theta_3)*np.sin(theta_1)*np.sin(theta_2)), -dt*(acc_y*(np.cos(theta_1)*np.cos(theta_3) + np.cos(theta_2)*np.sin(theta_1)*np.sin(theta_3)) - acc_x*(np.cos(theta_3)*np.sin(theta_1) - np.cos(theta_1)*np.cos(theta_2)*np.sin(theta_3)) + acc_z*np.cos(theta_2)*np.sin(theta_3)), 0, 0, 0, dt*(np.sin(theta_1)*np.sin(theta_3) + np.cos(theta_1)*np.cos(theta_2)*np.cos(theta_3)), -dt*(np.cos(theta_1)*np.sin(theta_3) - np.cos(theta_2)*np.cos(theta_3)*np.sin(theta_1)), dt*np.cos(theta_2)*np.cos(theta_3)],[ 0, 0, 0, 0, 0, 0, 1, dt*((omega_3*np.cos(theta_3)*np.sin(theta_2))/np.cos(theta_2)**2 + (omega_2*np.sin(theta_2)*np.sin(theta_3))/np.cos(theta_2)**2), dt*((omega_2*np.cos(theta_3))/np.cos(theta_2) - (omega_3*np.sin(theta_3))/np.cos(theta_2)), 0, (dt*np.sin(theta_3))/np.cos(theta_2), (dt*np.cos(theta_3))/np.cos(theta_2), 0, 0, 0],[ 0, 0, 0, 0, 0, 0, 0, 1, -dt*(omega_3*np.cos(theta_3) + omega_2*np.sin(theta_3)), 0, dt*np.cos(theta_3), -dt*np.sin(theta_3), 0, 0, 0],[ 0, 0, 0, 0, 0, 0, 0, dt*(omega_3*np.cos(theta_3) + omega_2*np.sin(theta_3) + (omega_3*np.cos(theta_3)*np.sin(theta_2)**2)/np.cos(theta_2)**2 + (omega_2*np.sin(theta_2)**2*np.sin(theta_3))/np.cos(theta_2)**2), dt*((omega_2*np.cos(theta_3)*np.sin(theta_2))/np.cos(theta_2) - (omega_3*np.sin(theta_2)*np.sin(theta_3))/np.cos(theta_2)) + 1, dt, (dt*np.sin(theta_2)*np.sin(theta_3))/np.cos(theta_2), (dt*np.cos(theta_3)*np.sin(theta_2))/np.cos(theta_2), 0, 0, 0],[ 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],[ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],[ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],[ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],[ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],[ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+            [1, 0, 0, dt, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [ 0, 1, 0, 0, dt, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [ 0, 0, 1, 0, 0, dt, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [ 0, 0, 0, 1, 0, 0, dt*(acc_y*np.cos(theta_1)*np.cos(theta_2) - acc_x*np.cos(theta_2)*np.sin(theta_1)), -dt*(acc_z*np.cos(theta_2) + acc_x*np.cos(theta_1)*np.sin(theta_2) + acc_y*np.sin(theta_1)*np.sin(theta_2)), 0, 0, 0, 0, dt*np.cos(theta_1)*np.cos(theta_2), dt*np.cos(theta_2)*np.sin(theta_1), -dt*np.sin(theta_2)],
+            [ 0, 0, 0, 0, 1, 0, -dt*(acc_x*(np.cos(theta_1)*np.cos(theta_3) + np.sin(theta_1)*np.sin(theta_2)*np.sin(theta_3)) + acc_y*(np.cos(theta_3)*np.sin(theta_1) - np.cos(theta_1)*np.sin(theta_2)*np.sin(theta_3))), dt*(acc_x*np.cos(theta_1)*np.cos(theta_2)*np.sin(theta_3) - acc_z*np.sin(theta_2)*np.sin(theta_3) + acc_y*np.cos(theta_2)*np.sin(theta_1)*np.sin(theta_3)), dt*(acc_x*(np.sin(theta_1)*np.sin(theta_3) + np.cos(theta_1)*np.cos(theta_3)*np.sin(theta_2)) - acc_y*(np.cos(theta_1)*np.sin(theta_3) - np.cos(theta_3)*np.sin(theta_1)*np.sin(theta_2)) + acc_z*np.cos(theta_2)*np.cos(theta_3)), 0, 0, 0, -dt*(np.cos(theta_3)*np.sin(theta_1) - np.cos(theta_1)*np.sin(theta_2)*np.sin(theta_3)), dt*(np.cos(theta_1)*np.cos(theta_3) + np.sin(theta_1)*np.sin(theta_2)*np.sin(theta_3)), dt*np.cos(theta_2)*np.sin(theta_3)],
+            [ 0, 0, 0, 0, 0, 1, dt*(acc_x*(np.cos(theta_1)*np.sin(theta_3) - np.cos(theta_2)*np.cos(theta_3)*np.sin(theta_1)) + acc_y*(np.sin(theta_1)*np.sin(theta_3) + np.cos(theta_1)*np.cos(theta_2)*np.cos(theta_3))), -dt*(acc_z*np.cos(theta_3)*np.sin(theta_2) + acc_x*np.cos(theta_1)*np.cos(theta_3)*np.sin(theta_2) + acc_y*np.cos(theta_3)*np.sin(theta_1)*np.sin(theta_2)), -dt*(acc_y*(np.cos(theta_1)*np.cos(theta_3) + np.cos(theta_2)*np.sin(theta_1)*np.sin(theta_3)) - acc_x*(np.cos(theta_3)*np.sin(theta_1) - np.cos(theta_1)*np.cos(theta_2)*np.sin(theta_3)) + acc_z*np.cos(theta_2)*np.sin(theta_3)), 0, 0, 0, dt*(np.sin(theta_1)*np.sin(theta_3) + np.cos(theta_1)*np.cos(theta_2)*np.cos(theta_3)), -dt*(np.cos(theta_1)*np.sin(theta_3) - np.cos(theta_2)*np.cos(theta_3)*np.sin(theta_1)), dt*np.cos(theta_2)*np.cos(theta_3)],
+            [ 0, 0, 0, 0, 0, 0, 1, dt*((omega_3*np.cos(theta_3)*np.sin(theta_2))/np.cos(theta_2)**2 + (omega_2*np.sin(theta_2)*np.sin(theta_3))/np.cos(theta_2)**2), dt*((omega_2*np.cos(theta_3))/np.cos(theta_2) - (omega_3*np.sin(theta_3))/np.cos(theta_2)), 0, (dt*np.sin(theta_3))/np.cos(theta_2), (dt*np.cos(theta_3))/np.cos(theta_2), 0, 0, 0],
+            [ 0, 0, 0, 0, 0, 0, 0, 1, -dt*(omega_3*np.cos(theta_3) + omega_2*np.sin(theta_3)), 0, dt*np.cos(theta_3), -dt*np.sin(theta_3), 0, 0, 0],
+            [ 0, 0, 0, 0, 0, 0, 0, dt*(omega_3*np.cos(theta_3) + omega_2*np.sin(theta_3) + (omega_3*np.cos(theta_3)*np.sin(theta_2)**2)/np.cos(theta_2)**2 + (omega_2*np.sin(theta_2)**2*np.sin(theta_3))/np.cos(theta_2)**2), dt*((omega_2*np.cos(theta_3)*np.sin(theta_2))/np.cos(theta_2) - (omega_3*np.sin(theta_2)*np.sin(theta_3))/np.cos(theta_2)) + 1, dt, (dt*np.sin(theta_2)*np.sin(theta_3))/np.cos(theta_2), (dt*np.cos(theta_3)*np.sin(theta_2))/np.cos(theta_2), 0, 0, 0],
+            [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+            [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+            [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+            [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+            [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+            [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
         ])
         print("state estimé par matlab:", state_estimated)
         print("F de matlab",F_matlab)
@@ -381,18 +411,27 @@ class sensor_fusion():
         print("etat estimé", estimated_state_uav)
 
         return estimated_state_uav, F, F_markers
-    def EKF_filter(self,z, h, H, predicted_state_uav, F, Q, R, P):
+    def EKF_filter(self,H, predicted_state_uav, F, Q, R, P, residual):
 
-        Pp= F @ P @ F.transpose() + Q
-        S = H @ Pp @ H.transpose() + R
-        K = (Pp @ H.transpose())*inv(S)
-        residual = z.transpose() - h.transpose()
-        print("residual", residual)
+        # Pp= F @ P @ (F.transpose()) + Q
+        S = H @ P @ (H.transpose()) + R
+        K = (P @ H.transpose())*inv(S)
+        
+
         #update
         update_state = predicted_state_uav + K*residual
-        P = Pp - K @ S @ K.transpose()
+        P = P - K @ S @ K.transpose()
         print("covariance", P)
         return update_state, P
+    
+    def residual_euler(self,measurement,estimation):
+        residual = ((measurement - estimation + 180) % 360 - 180)
+        if residual < -180:
+            residual += 360
+        elif residual > 180:
+            residual -= 360
+        return residual
+        
     def imu_measurement_matrix(self,estimated_state_uav):
 
         h = np.array([
@@ -418,8 +457,8 @@ class sensor_fusion():
         # roll = np.radians(estimated_state_uav[8,0])
         euler = np.radians(np.matrix(estimated_state_uav[6:9]))
         position = np.matrix(estimated_state_uav[0:3])
-        offset_z = offset[0,2]
-        offset_center = np.sqrt(offset[0,0]**2 + offset[0,1]**2)
+        offset_z = offset[2]
+        offset_center = np.sqrt(offset[0]**2 + offset[1]**2)
 
         # h = (x_z/(np.cos(pitch)*np.cos(roll)))
 
@@ -427,12 +466,13 @@ class sensor_fusion():
         #                 [0, 0, 1/(np.cos(pitch)*np.cos(roll)), 0, 0, 0, 0, np.cos(roll)*np.sin(pitch)/((np.cos(pitch)*np.cos(roll))**2), np.cos(pitch)*np.sin(roll)/((np.cos(pitch)*np.cos(roll))**2), 0, 0, 0, 0, 0, 0]
         #             ])
         
-        
+        print("test eue",euler[1,0])
         R_imu_abs = np.matrix([
-                                    [np.cos(euler[1])*np.cos(euler[0]), np.cos(euler[1])*np.sin(euler[0]), -np.sin(euler[1])],
-                                    [np.sin(euler[2])*np.sin(euler[1])*np.cos(euler[0])-np.cos(euler[2])*np.sin(euler[0]),  np.sin(euler[2])*np.sin(euler[1])*np.sin(euler[0])+np.cos(euler[2])*np.cos(euler[0]),  np.sin(euler[2])*np.cos(euler[1])],
-                                    [np.cos(euler[2])*np.sin(euler[1])*np.cos(euler[0])+np.sin(euler[2])*np.sin(euler[0]),  np.cos(euler[2])*np.sin(euler[1])*np.sin(euler[0])-np.sin(euler[2])*np.cos(euler[0]),  np.cos(euler[2])*np.cos(euler[1])]
-            ])
+            [np.cos(euler[1,0])*np.cos(euler[0,0]), np.cos(euler[1,0])*np.sin(euler[0,0]), -np.sin(euler[1,0])],
+            [np.sin(euler[2,0])*np.sin(euler[1,0])*np.cos(euler[0,0])-np.cos(euler[2,0])*np.sin(euler[0,0]),  np.sin(euler[2,0])*np.sin(euler[1,0])*np.sin(euler[0,0])+np.cos(euler[2,0])*np.cos(euler[0,0]),  np.sin(euler[2,0])*np.cos(euler[1,0])],
+            [np.cos(euler[2,0])*np.sin(euler[1,0])*np.cos(euler[0,0])+np.sin(euler[2,0])*np.sin(euler[0,0]),  np.cos(euler[2,0])*np.sin(euler[1,0])*np.sin(euler[0,0])-np.sin(euler[2,0])*np.cos(euler[0,0]),  np.cos(euler[2,0])*np.cos(euler[1,0])]
+        ])
+
         A = np.transpose(np.matrix([[0,0,3]]))
         a = R_imu_abs@A
         alpha = np.degrees(np.arccos(a[2]/A[2]))
@@ -440,11 +480,12 @@ class sensor_fusion():
         alpha_rad = np.radians(alpha)
         beta_rad = np.radians(beta)
         h_lidar = ((position[2,0] + (np.cos(beta_rad)*offset_center))/np.cos(alpha_rad))-offset_z
+        print("estimation mesurement lidar", h_lidar)
 
         theta_1 = euler[0]
-        theta_2 = euler[1]
-        theta_3 = euler[2]
-        pos_z = position[2]
+        theta_2 = euler[1,0]
+        theta_3 = euler[2,0]
+        pos_z = position[2,0]
 
         H_lidar = np.matrix([
             [0, 0, 1/(np.cos(theta_2)*np.cos(theta_3)), 0, 0, 0, 0, (np.sin(theta_2)*(pos_z + offset_center*np.cos(np.arccos(np.cos(theta_2)*np.cos(theta_3)) - 90)))/(np.cos(theta_2)**2*np.cos(theta_3)) - (offset_center*np.sin(np.arccos(np.cos(theta_2)*np.cos(theta_3)) - 90)*np.sin(theta_2))/(np.cos(theta_2)*np.sqrt(1 - np.cos(theta_2)**2*np.cos(theta_3)**2)), (np.sin(theta_3)*(pos_z + offset_center*np.cos(np.arccos(np.cos(theta_2)*np.cos(theta_3)) - 90)))/(np.cos(theta_2)*np.cos(theta_3)**2) - (offset_center*np.sin(np.arccos(np.cos(theta_2)*np.cos(theta_3)) - 90)*np.sin(theta_3))/(np.cos(theta_3)*np.sqrt(1 - np.cos(theta_2)**2*np.cos(theta_3)**2)), 0, 0, 0, 0, 0, 0]
@@ -556,33 +597,39 @@ class sensor_fusion():
             #loop for each landmarks detected
             #markers estimation
             state_markers_fonction = state_markers[value-1,:]
-            Ppredicted_markers = F_markers @ P_markers[value][1] @ F_markers.transpose() + Q_markers
+            #Ppredicted_markers = F_markers @ P_markers[value][1] @ F_markers.transpose() + Q_markers
             h_markers, H_camera, H_markers = self.camera_markers_measurement(uav_state, state_markers_fonction, offset, offset_angle)
-            S_markers = H_markers@Ppredicted_markers@H_markers.transpose() + R
-            K_markers = (Ppredicted_markers@H_markers.transpose())@inv(S_markers)
+            S_markers = H_markers@P_markers@H_markers.transpose() + R
+            K_markers = (P_markers@H_markers.transpose())@inv(S_markers)
             #residual, verifier comment on le fait
             residual_markers = z.transpose() - h_markers  #verifier a bien faire la transpose si necessaire
 
+            residual_markers[3,0] = self.residual_euler(z[0,3], h_markers[3,0])
+            residual_markers[4,0] = self.residual_euler(z[0,4], h_markers[4,0])
+            residual_markers[5,0] = self.residual_euler(z[0,5], h_markers[5,0])
             # print("z",z)
             # print("h markers", h_markers)
             # print("k markers", K_markers)
             # print("state", state_markers[value,:])
 
             state_markers[value-1,:]= state_markers[value-1,:] + (K_markers@residual_markers).transpose()
-            P_markers[value][1] = Ppredicted_markers - K_markers@H_markers@Ppredicted_markers.transpose()
+            P_markers[value][1] = P_markers - K_markers@H_markers@P_markers.transpose()
 
             # print("apres transpose", state_markers[value,:])
 
             #uav estimation
-            Ppredicted_uav = F_uav@P_uav@F_uav.transpose() + Q_uav 
+            #Ppredicted_uav = F_uav@P_uav@F_uav.transpose() + Q_uav 
             h_camera, H_camera, H_markers = self.camera_markers_measurement(uav_state, state_markers_fonction, offset, offset_angle)
-            S_uav = H_camera@Ppredicted_uav@H_camera.transpose() + R
-            K_uav = (Ppredicted_uav@H_camera.transpose())@inv(S_uav)
+            S_uav = H_camera@P_uav@H_camera.transpose() + R
+            K_uav = (P_uav@H_camera.transpose())@inv(S_uav)
             #faire residual uav
             residual_uav = z.transpose() - h_camera
+            residual_uav[3,0] = self.residual_euler(z[0,3], h_camera[3,0])
+            residual_uav[4,0] = self.residual_euler(z[0,4], h_camera[4,0])
+            residual_uav[5,0] = self.residual_euler(z[0,5], h_camera[5,0])
             print('residual de la camera', residual_uav)
             uav_state = uav_state + K_uav*residual_uav
-            P_uav = Ppredicted_uav - K_uav*H_camera*Ppredicted_uav.transpose()
+            P_uav = P_uav - K_uav*H_camera*P_uav.transpose()
             print("covariance apres le slam", P_uav)
             #end of the loop------------------------------------------------------
         return uav_state, P_uav, state_markers, P_markers
@@ -689,12 +736,12 @@ class sensor_fusion():
                 max_increment_t = max((increment for inner_dict in camera_top_dict.values() for increment in inner_dict), default=None)
 
                 # Trouver tous les IDs ayant la valeur maximale d'incrémentation
-                id_max = [id for id, inner_dict in camera_top_dict.items() if max_increment_t in inner_dict]
+                id_max_top = [id for id, inner_dict in camera_top_dict.items() if max_increment_t in inner_dict]
             else:
-                id_max = []
+                id_max_top = []
                 
-            if id_max != []:   
-                t = camera_top_dict[id_max[0]][max_increment_t][2]
+            if id_max_top != []:   
+                t = camera_top_dict[id_max_top[0]][max_increment_t][2]
 
                 if t1-self.dt_acceptable <= t <= t1+self.dt_acceptable:
                     camera_top_measurement = camera_top_dict
@@ -709,12 +756,12 @@ class sensor_fusion():
                 max_increment_b = max((increment for inner_dict in camera_below_dict.values() for increment in inner_dict), default=None)
 
                 # Trouver tous les IDs ayant la valeur maximale d'incrémentation
-                id_max = [id for id, inner_dict in camera_below_dict.items() if max_increment_b in inner_dict]
+                id_max_b = [id for id, inner_dict in camera_below_dict.items() if max_increment_b in inner_dict]
             else:
-                id_max = []
+                id_max_b = []
 
-            if id_max != []:   
-                t = camera_below_dict[id_max[0]][max_increment_b][2]
+            if id_max_b != []:   
+                t = camera_below_dict[id_max_b[0]][max_increment_b][2]
 
                 if t1-self.dt_acceptable <= t <= t1+self.dt_acceptable:
                     camera_below_measurement = camera_below_dict
@@ -748,39 +795,76 @@ class sensor_fusion():
             else:
                 situation = 0
                 dt=self.dt
+                camera_top_measurement = 0
             print("temps", dt)
             # print("avant fct state:",self.uav_state)
-            self.uav_state, F, F_markers = self.state_function(self.uav_state, dt)
             
+            if situation != 0:
+                self.uav_state, F, F_markers = self.state_function(self.uav_state, dt)
+                self.P_uav= F @ self.P_uav @ (F.transpose()) + self.Q  #at the begining, the covariance has to be estimated once 
 
             if type(imu_measurement) != int:
 
                 h_imu, H_imu = self.imu_measurement_matrix(self.uav_state)
                 print("mesure imu", imu_measurement)
-                self.uav_state, self.P_uav = self.EKF_filter(imu_measurement,h_imu, H_imu, self.uav_state, F, self.Q, self.R_imu, self.P_uav)
+                residual_imu =  imu_measurement.transpose() - h_imu.transpose()
+                residual_imu[0,0] = self.residual_euler(imu_measurement[0,0], h_imu[0,0])
+                residual_imu[1,0] = self.residual_euler(imu_measurement[0,1], h_imu[0,1])
+                residual_imu[2,0] = self.residual_euler(imu_measurement[0,2], h_imu[0,2])
+                print("residual imu", residual_imu)
+
+                
+
+                self.uav_state, self.P_uav = self.EKF_filter(H_imu, self.uav_state, F, self.Q, self.R_imu, self.P_uav, residual_imu)
                 print("apres imu", self.uav_state)
             if type(lidar_measurement) != int:
 
                 h_lidar, H_lidar = self.lidar_measurement_matrix(self.uav_state, self.offset_lidar)
-                
-                self.uav_state, self.P_uav = self.EKF_filter(lidar_measurement,h_lidar, H_lidar, self.uav_state, F, self.Q, self.R_lidar, self.P_uav)  
+                residual_lidar = lidar_measurement - h_lidar
+                print("measurement lidar", lidar_measurement)
+                print("residual lidar", residual_lidar)
+                self.uav_state, self.P_uav = self.EKF_filter(H_lidar, self.uav_state, F, self.Q, self.R_lidar, self.P_uav, residual_lidar)  
                 print("apres lidar", self.uav_state)
 
-            if type(camera_top_measurement) != int:  
-                
-                self.uav_state, self.P_uav, self.state_markers, self.P_markers_dict = self.slam(id_max, max_increment_t, camera_top_measurement, self.uav_state, F, self.P_uav, self.Q, self.state_markers, self.P_markers_dict, F_markers, self.Q_markers, self.R_camera_top, self.offset_imu_camera_top, self.offset_angle_top )
-                print("apres camtop", self.uav_state)
-            #print("type camera", type(camera_below_measurement))   
 
-            if type(camera_below_measurement) != int:  
+            if type(camera_below_measurement) != int:
+
+                if type(camera_top_measurement) != int:
+                    for value in set(id_max_b + id_max_top): 
+                     prediction_covariance_markers = 1
+                     self.P_markers_dict[value][1] = F_markers @ self.P_markers_dict[value][1] @ F_markers.transpose() + self.Q_markers  
+                else:
+                    for value in id_max_b: 
+                        self.P_markers_dict[value][1] = F_markers @ self.P_markers_dict[value][1] @ F_markers.transpose() + self.Q_markers   
+
+
                 # print("avantle slam",self.uav_state)
                 print("camera dic avant le slam below", camera_below_measurement)
-                self.uav_state, self.P_uav, self.state_markers, self.P_markers_dict = self.slam(id_max, max_increment_b, camera_below_measurement, self.uav_state, F, self.P_uav, self.Q, self.state_markers, self.P_markers_dict, F_markers, self.Q_markers, self.R_camera_below, self.offset_imu_camera_below, self.offset_angle_below )  
+                self.uav_state, self.P_uav, self.state_markers, self.P_markers_dict = self.slam(id_max_b, max_increment_b, camera_below_measurement, self.uav_state, F, self.P_uav, self.Q, self.state_markers, self.P_markers_dict, F_markers, self.Q_markers, self.R_camera_below, self.offset_imu_camera_below, self.offset_angle_below )  
                 print("apres cambelow", self.uav_state)
+
+
+            if type(camera_top_measurement) != int: 
+
+                if prediction_covariance_markers == 1:
+                    prediction_covariance_markers = 0
+                else:
+                    for value in id_max_top: 
+                        self.P_markers_dict[value][1] = F_markers @ self.P_markers_dict[value][1] @ F_markers.transpose() + self.Q_markers 
+
+                Ppredicted_markers = F_markers @ self.P_markers_dict[value][1] @ F_markers.transpose() + self.Q_markers 
+                
+                self.uav_state, self.P_uav, self.state_markers, self.P_markers_dict = self.slam(id_max_top, max_increment_t, camera_top_measurement, self.uav_state, F, self.P_uav, self.Q, self.state_markers, self.P_markers_dict, F_markers, self.Q_markers, self.R_camera_top, self.offset_imu_camera_top, self.offset_angle_top )
+                print("apres camtop", self.uav_state)
+            #print("type camera", type(camera_below_measurement))   
+                
             # Mettre à jour le temps pour la prochaine itération
             # self.uav_state = self.uav_state.transpose()
             self.true_uav_position = self.uav_state
             print("result",self.true_uav_position)
+            if self.uav_state[0,0]>0.1 or self.uav_state[1,0]>0.1 or self.uav_state[2,0]>1 or np.absolute(self.uav_state[6,0])>1 or np.absolute(self.uav_state[7,0])>1 or np.absolute(self.uav_state[8,0])>1 :
+                print("probem")
+                time.sleep(30)
             self.plot_3d_curve(self.true_uav_position[0], self.true_uav_position[1], self.true_uav_position[2])
             # print("resultat",self.uav_state)
 
@@ -1328,6 +1412,8 @@ class sensor_fusion():
                     acceleration[2] is not None 
                 ):
                     with self.lock:
+                        if euler[0][0]>180:
+                            euler[0][0] = euler[0][0] - 360
                         self.get_imu_meas = [
                                         [t],
                                         [euler[0][0], euler[0][1], euler[0][2]],
