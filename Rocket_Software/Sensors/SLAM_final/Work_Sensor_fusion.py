@@ -254,14 +254,7 @@ class sensor_fusion():
 
         self.lock = threading.Lock()
 
-    def plot_3d_curve(self, x, y, z):
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        ax.plot(x, y, z)
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Z')
-        plt.show()    
+ 
     def state_function(self,state_uav, dt):
         
         #matrice rotation bodyframe->absolute
@@ -271,87 +264,7 @@ class sensor_fusion():
         euler_deg = np.transpose(np.matrix(state_uav[6:9]))
         angular_rate = np.transpose(np.matrix(state_uav[9:12]))
         linear_acceleration = np.matrix(state_uav[12:15])
-        ax = linear_acceleration[0,0]
-        ay = linear_acceleration[1,0]
-        az = linear_acceleration[2,0]
-        w1 = np.degrees(angular_rate[0,0])
-        w2 = np.degrees(angular_rate[0,1])
-        w3 = np.degrees(angular_rate[0,2])
-        print("velocity dans l estimation de state", velocity)
         
-        
-        R_imu_abs = np.matrix([
-                                    [np.cos(euler[0,1])*np.cos(euler[0,0]), np.cos(euler[0,1])*np.sin(euler[0,0]), -np.sin(euler[0,1])],
-                                    [np.sin(euler[0,2])*np.sin(euler[0,1])*np.cos(euler[0,0])-np.cos(euler[0,2])*np.sin(euler[0,0]),  np.sin(euler[0,2])*np.sin(euler[0,1])*np.sin(euler[0,0])+np.cos(euler[0,2])*np.cos(euler[0,0]),  np.sin(euler[0,2])*np.cos(euler[0,1])],
-                                    [np.cos(euler[0,2])*np.sin(euler[0,1])*np.cos(euler[0,0])+np.sin(euler[0,2])*np.sin(euler[0,0]),  np.cos(euler[0,2])*np.sin(euler[0,1])*np.sin(euler[0,0])-np.sin(euler[0,2])*np.cos(euler[0,0]),  np.cos(euler[0,2])*np.cos(euler[0,1])]
-            ])
-        
-        #matrice pour passer de anglar rate a euler rate
-        B_theta = np.matrix([
-                            [0, np.sin(euler[0,2]), np.cos(euler[0,2])],
-                            [0, np.cos(euler[0,1])*np.cos(euler[0,2]), -np.cos(euler[0,1])*np.sin(euler[0,2])],
-                            [np.cos(euler[0,1]), np.sin(euler[0,1])*np.sin(euler[0,2]), np.sin(euler[0,1])*np.cos(euler[0,2])]
-                            ])
-        euler_dot = (1/(np.cos(euler[0,1])))*B_theta @ angular_rate.transpose()
-        print("eleur dot a la main", euler_dot)
-        position_e = position.transpose() + velocity.transpose()*dt
-
-        velocity_e = velocity.transpose() + (R_imu_abs@linear_acceleration)*dt
-
-        estimated_euler = np.degrees(euler.transpose() + euler_dot.transpose()*dt)
-    
-        estimated_state_uav = np.array([[position_e[0,0], position_e[1,0], position_e[2,0],velocity_e[0,0], velocity_e[1,0], velocity_e[2,0], estimated_euler[0,0], estimated_euler[1,0], estimated_euler[2,0], angular_rate[0,0], angular_rate[0,1], angular_rate[0,2],linear_acceleration[0,0], linear_acceleration[1,0], linear_acceleration[2,0]]])
-        estimated_state_uav = estimated_state_uav.transpose()
-        print("state estimé a la main",estimated_state_uav)
-        F47 = (-np.cos(euler[0,1])*np.sin(euler[0,0])*ax + np.cos(euler[0,1])*np.cos(euler[0,0])*ay)*dt
-        F48 = (-np.sin(euler[0,1])*np.cos(euler[0,0])*ax - np.sin(euler[0,1])*np.sin(euler[0,0])*ay - np.cos(euler[0,1])*az)*dt
-        F413 = np.cos(euler[0,1])*np.cos(euler[0,0])*dt
-        F414 = np.cos(euler[0,1])*np.sin(euler[0,0])*dt
-        F415 = -np.sin(euler[0,1])*dt
-        F57 = ((-np.sin(euler[0,2])*np.sin(euler[0,1])*np.sin(euler[0,0])-np.cos(euler[0,2])*np.cos(euler[0,0]))*ax + (np.sin(euler[0,2])*np.sin(euler[0,1])*np.cos(euler[0,0]) - np.cos(euler[0,2])*np.sin(euler[0,0]))*ay)*dt
-        F58 = ((np.sin(euler[0,2])*np.cos(euler[0,1])*np.cos(euler[0,0]))*ax + np.sin(euler[0,2])*np.cos(euler[0,1])*np.sin(euler[0,0])*ay - np.sin(euler[0,2])*np.sin(euler[0,1])*az)*dt
-        F59 = ((np.cos(euler[0,2])*np.sin(euler[0,1])*np.cos(euler[0,0]) + np.sin(euler[0,2])*np.sin(euler[0,0]))*ax + (np.cos(euler[0,2])*np.sin(euler[0,1])*np.sin(euler[0,0]) - np.cos(euler[0,0])*np.sin(euler[0,2]))*ay + np.cos(euler[0,2])*np.cos(euler[0,1])*az)*dt
-        F513 = (np.sin(euler[0,2])*np.sin(euler[0,1])*np.cos(euler[0,0])-np.cos(euler[0,2])*np.sin(euler[0,0]))*dt
-        F514 = (np.sin(euler[0,2])*np.sin(euler[0,1])*np.sin(euler[0,0]) + np.cos(euler[0,2])*np.cos(euler[0,0]))*dt
-        F515 = np.sin(euler[0,2])*np.cos(euler[0,1])*dt
-        F67 = ((-np.cos(euler[0,2])*np.sin(euler[0,1])*np.sin(euler[0,0]) + np.sin(euler[0,2])*np.cos(euler[0,0]))*ax + (np.cos(euler[0,2])*np.sin(euler[0,1])*np.cos(euler[0,0]) + np.sin(euler[0,2])*np.sin(euler[0,0]))*ay)*dt
-        F68 = (np.cos(euler[0,2])*np.cos(euler[0,1])*np.cos(euler[0,0])*ax + np.cos(euler[0,2])*np.cos(euler[0,1])*np.sin(euler[0,0])*ay - np.cos(euler[0,2])*np.sin(euler[0,1])*az)*dt
-        F69 = ((-np.sin(euler[0,2])*np.sin(euler[0,1])*np.cos(euler[0,0]) + np.cos(euler[0,2])*np.sin(euler[0,0]))*ax + (-np.sin(euler[0,2])*np.sin(euler[0,1])*np.sin(euler[0,0]) - np.cos(euler[0,2])*np.cos(euler[0,0]))*ay -np.sin(euler[0,2])*np.cos(euler[0,1])*az)*dt
-        F613 = (np.cos(euler[0,2])*np.sin(euler[0,1])*np.cos(euler[0,0]) + np.sin(euler[0,2])*np.sin(euler[0,0]))*dt
-        F614 = (np.cos(euler[0,2])*np.sin(euler[0,1])*np.sin(euler[0,0]) - np.sin(euler[0,2])*np.cos(euler[0,0]))*dt
-        F615 = np.cos(euler[0,2])*np.cos(euler[0,1])*dt
-        F78 = np.sin(euler[0,1])*(np.sin(euler[0,2])*w2 + np.cos(euler[0,2])*w3)*dt/(np.cos(euler[0,1])**2)
-        F79 = (np.cos(euler[0,2])*w2 - np.sin(euler[0,2])*w3)*np.cos(euler[0,1])*dt/(np.cos(euler[0,1])**2)
-        F711 = np.sin(euler[0,2])*dt/np.cos(euler[0,1])
-        F712 = np.cos(euler[0,2])*dt/np.cos(euler[0,1])
-        F88 = 1 + ((-np.sin(euler[0,1])*np.cos(euler[0,1])*w2 + np.sin(euler[0,1])*np.sin(euler[0,2])*w3)*np.cos(euler[0,1]) + np.sin(euler[0,1])*(np.cos(euler[0,1])*np.cos(euler[0,2])*w2 - np.cos(euler[0,1])*np.sin(euler[0,2])*w3))*dt/(np.cos(euler[0,1])**2)
-        F89 = (-np.sin(euler[0,2])*np.cos(euler[0,1])*w2 - np.cos(euler[0,1])*np.cos(euler[0,2])*w3)*np.cos(euler[0,1])*dt/(np.cos(euler[0,1])**2)
-        F811 = np.cos(euler[0,2])*dt
-        F812 = -np.sin(euler[0,2])*dt
-        F98 = ((-np.sin(euler[0,1])*w1 + np.cos(euler[0,1])*np.sin(euler[0,2])*w2 + np.cos(euler[0,1])*np.cos(euler[0,2])*w3)*np.cos(euler[0,1]) + np.sin(euler[0,1])*(np.cos(euler[0,1])*w1 + np.sin(euler[0,1])*np.sin(euler[0,2])*w2 + np.sin(euler[0,1])*np.cos(euler[0,2])*w3))*dt/(np.cos(euler[0,1])**2)
-        F99 = 1 + ((np.sin(euler[0,1])*np.cos(euler[0,2])*w2 - np.sin(euler[0,1])*np.sin(euler[0,2])*w3)*np.cos(euler[0,1]))*dt/(np.cos(euler[0,1])**2)
-        F911 = np.sin(euler[0,1])*np.sin(euler[0,2])*dt/np.cos(euler[0,1])
-        F912 = np.sin(euler[0,1])*np.cos(euler[0,2])*dt/np.cos(euler[0,1])
-
-        F = np.matrix([
-                        [1, 0, 0, dt, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                        [0, 1, 0, 0, dt, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                        [0, 0, 1, 0, 0, dt, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 1, 0, 0, F47, F48, 0, 0, 0, 0, F413, F414, F415],
-                        [0, 0, 0, 0, 1, 0, F57, F58, F59, 0, 0, 0, F513, F514, F515],
-                        [0, 0, 0, 0, 0, 1, F67, F68, F69, 0, 0, 0, F613, F614, F615],
-                        [0, 0, 0, 0, 0, 0, 1, F78, F79, 0, F711, F712, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0, 0, F88, F89, 0, F811, F812, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0, 0, F98, F99, dt, F911, F912, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-        ])
-
-        print("F a la main:",F)
 
         pos_x = position[0,0]
         pos_y = position[0,1]
@@ -409,7 +322,7 @@ class sensor_fusion():
                               [0,1,0],
                               [0,0,1]])
         
-        print("etat estimé", estimated_state_uav)
+        
 
         # return estimated_state_uav, F, F_markers
         return state_estimated, F_matlab, F_markers
@@ -912,17 +825,14 @@ class sensor_fusion():
                 print("camera dic avant le slam top", camera_top_measurement)
                 self.uav_state, self.P_uav, self.state_markers, self.P_markers_dict = self.slam(id_max_top, max_increment_t, camera_top_measurement, self.uav_state, F, self.P_uav, self.Q, self.state_markers, self.P_markers_dict, F_markers, self.Q_markers, self.R_camera_top, self.offset_imu_camera_top, self.offset_angle_top )
                 print("apres camtop", self.uav_state)
-            #print("type camera", type(camera_below_measurement))   
-                
-            # Mettre à jour le temps pour la prochaine itération
-            # self.uav_state = self.uav_state.transpose()
+        
             self.true_uav_position = self.uav_state
             print("result",self.true_uav_position)
             if abs(self.uav_state[0,0])>0.1 or self.uav_state[1,0]>0.1 or self.uav_state[2,0]>1 or np.absolute(self.uav_state[3,0])>1 or np.absolute(self.uav_state[4,0])>1 or np.absolute(self.uav_state[5,0])>1 or np.absolute(self.uav_state[6,0])>20 or np.absolute(self.uav_state[7,0])>20 or np.absolute(self.uav_state[8,0])>20:
                 print("probem")
                 time.sleep(30)
-            self.plot_3d_curve(self.true_uav_position[0], self.true_uav_position[1], self.true_uav_position[2])
-            # print("resultat",self.uav_state)
+            
+            
 
             imu_measurement = 0
             lidar_measurement = 0
@@ -946,15 +856,7 @@ class sensor_fusion():
             elif situation ==7:
                 self.dt_camera = dt
             
-            # for threa in threading.enumerate():
-            #     print(threa.name)
-           #!/usr/bin/env python
-                
-    # #def print_task(self):
-    #     while True:
-    #         # print(self.true_uav_position)
-    #         # time.sleep(1)
-    #         pass
+
 
     def camera_top_task(self, get_camera_top_meas):
         #region setup
@@ -1031,8 +933,7 @@ class sensor_fusion():
         # Load the ArUco dictionary
         logging.info("Detecting '{}' markers...".format(
             aruco_dictionary_name))
-        # this_aruco_dictionary = cv2.aruco.Dictionary_get(ARUCO_DICT[aruco_dictionary_name])
-        # this_aruco_parameters = cv2.aruco.DetectorParameters_create()
+
         this_aruco_dictionary = cv2.aruco.getPredefinedDictionary(ARUCO_DICT[aruco_dictionary_name])
         this_aruco_parameters =  cv2.aruco.DetectorParameters()
         
@@ -1047,50 +948,28 @@ class sensor_fusion():
         #endregion
         while not self.stop_measurement_thread:
         
-            # Capture frame-by-frame
-            # This method returns True/False as well
-            # as the video frame.
-            # ret, frame = cap.read() 
-            # if not cap.isOpened():
-            #  print("Error: Unable to open camera")
-            # break
-            # Capturer une image dans le flux
-            # cap.capture_image("main")
+
             frame = cap.capture_array()
             t1 = time.time()
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         # display the image on screen and wait for a keypress
         
 
-            # Décodez le tableau NumPy en une image OpenCV
-            # frame = cv2.imdecode(array, 1)
-
-            
-            # Detect ArUco markers in the video frame
+ 
             (corners, marker_ids, rejected) = cv2.aruco.detectMarkers(
             frame, this_aruco_dictionary, parameters=this_aruco_parameters)
             n=n+1
             # Check that at least one ArUco marker was detected
             if marker_ids is not None:
 
-                # Draw a square around detected markers in the video frame
-                #cv2.aruco.drawDetectedMarkers(frame, corners, marker_ids)
-                
-                # Get the rotation and translation vectors
+           
                 rvecs, tvecs, obj_points = cv2.aruco.estimatePoseSingleMarkers(
                     corners,
                     aruco_marker_side_length,
                     mtx, 
                     dst)
                 
-                # Print the pose for the ArUco marker
-                # The pose of the marker is with respect to the camera lens frame.
-                # Imagine you are looking through the camera viewfinder, 
-                # the camera lens frame's:
-                # x-axis points to the right
-                # y-axis points straight down towards your toes
-                # z-axis points straight ahead away from your eye, out of the camera
-                
+
                 for i, marker_id in enumerate(marker_ids):
                 
                     marker_id = marker_id[0]
@@ -1154,25 +1033,7 @@ class sensor_fusion():
                         with self.lock:
                             self.get_camera_top_meas = measurement_dict
 
-                        # print(marker_id)
-                        # print("transform_translation_x: {}".format(transform_translation_x))
-                        # print("transform_translation_y: {}".format(transform_translation_y))
-                        # print("transform_translation_z: {}".format(transform_translation_z))
-                        # print("roll_x: {}".format(roll_x))
-                        # print("pitch_y: {}".format(pitch_y))
-                        # print("yaw_z: {}".format(yaw_z))
-                        # # print("roll_z: {}".format(euler[0]))
-                        # # print("pitch_y: {}".format(euler[1]))
-                        # # print("yaw_x: {}".format(euler[2]))
-                        # print()
-                        
-                        # Draw the axes on the marker
-                        #cv2.drawFrameAxes(frame, mtx, dst, rvecs[i], tvecs[i], aruco_marker_side_length, 1)
-                
-            # Display the resulting frame
-            #cv2.imshow('frame',frame)
-                
-            # If "q" is pressed on the keyboard, 
+   
             # exit this loop
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -1245,7 +1106,7 @@ class sensor_fusion():
         """
         if ARUCO_DICT.get(aruco_dictionary_name, None) is None:
             logging.info("[INFO] ArUCo tag is not supported")
-        # Load the camera parameters from the saved file
+        
         cv_file = cv2.FileStorage(
             camera_calibration_parameters_filename, cv2.FILE_STORAGE_READ) 
         mtx = cv_file.getNode('K').mat()
@@ -1256,12 +1117,9 @@ class sensor_fusion():
         [0,0,1]])
         dst = np.matrix([[-0.199154552455924,-0.111666325169893,0,0,0.198132380405577]])
 
-        # print(mtx)
-        # print(dst)   
-        # Load the ArUco dictionary
+      
         logging.info("Detecting '{}' markers...".format(aruco_dictionary_name))
-        # this_aruco_dictionary = cv2.aruco.Dictionary_get(ARUCO_DICT[aruco_dictionary_name])
-        # this_aruco_parameters = cv2.aruco.DetectorParameters_create()
+
         this_aruco_dictionary = cv2.aruco.getPredefinedDictionary(ARUCO_DICT[aruco_dictionary_name])
         this_aruco_parameters =  cv2.aruco.DetectorParameters()
         
@@ -1275,49 +1133,24 @@ class sensor_fusion():
         measurement_dict = {}
         #endregion
         while not self.stop_measurement_thread:
-            # Capture frame-by-frame
-            # This method returns True/False as well
-            # as the video frame.
-            # ret, frame = cap.read() 
-            # if not cap.isOpened():
-            #  print("Error: Unable to open camera")
-            # break
-            # Capturer une image dans le flux
-            # cap.capture_image("main")
+
             frame = cap.capture_array()
             t1 = time.time()
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        # display the image on screen and wait for a keypress
-        
 
-            # Décodez le tableau NumPy en une image OpenCV
-            # frame = cv2.imdecode(array, 1)
-
-            
-            # Detect ArUco markers in the video frame
             (corners, marker_ids, rejected) = cv2.aruco.detectMarkers(
             frame, this_aruco_dictionary, parameters=this_aruco_parameters)
             n=n+1
             # Check that at least one ArUco marker was detected
             if marker_ids is not None:
 
-                # Draw a square around detected markers in the video frame
-                #cv2.aruco.drawDetectedMarkers(frame, corners, marker_ids)
-                
-                # Get the rotation and translation vectors
+             
                 rvecs, tvecs, obj_points = cv2.aruco.estimatePoseSingleMarkers(
                     corners,
                     aruco_marker_side_length,
                     mtx, 
                     dst)
                     
-                # Print the pose for the ArUco marker
-                # The pose of the marker is with respect to the camera lens frame.
-                # Imagine you are looking through the camera viewfinder, 
-                # the camera lens frame's:
-                # x-axis points to the right
-                # y-axis points straight down towards your toes
-                # z-axis points straight ahead away from your eye, out of the camera
                 
                 for i, marker_id in enumerate(marker_ids):
                     marker_id = marker_id[0]
@@ -1382,33 +1215,11 @@ class sensor_fusion():
                             if current_id not in measurement_dict:
                                 measurement_dict[current_id] = {}
                             measurement_dict[current_id][incrementation]= new_row
-                        # print("lock camera", self.lock)
-                        # print("patryck 2", self.lock.locked())
+                        
                         if self.lock.locked() != True:
                             # print("patryk ")
                             self.get_camera_below_meas = measurement_dict
-                    # print("dic from cam", measurement_dict)
-
-                    # print(marker_id)
-                    # print("transform_translation_x: {}".format(transform_translation_x))
-                    # print("transform_translation_y: {}".format(transform_translation_y))
-                    # print("transform_translation_z: {}".format(transform_translation_z))
-                    # print("roll_x: {}".format(roll_x))
-                    # print("pitch_y: {}".format(pitch_y))
-                    # print("yaw_z: {}".format(yaw_z))
-                    # # print("roll_z: {}".format(euler[0]))
-                    # # print("pitch_y: {}".format(euler[1]))
-                    # # print("yaw_x: {}".format(euler[2]))
-                    # print()
                     
-                    # Draw the axes on the marker
-                    #cv2.drawFrameAxes(frame, mtx, dst, rvecs[i], tvecs[i], aruco_marker_side_length, 1)
-                
-            # Display the resulting frame
-            #cv2.imshow('frame',frame)
-                
-            # If "q" is pressed on the keyboard, 
-            # exit this loop
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
         
@@ -1429,24 +1240,6 @@ class sensor_fusion():
         # i2c = board.STEMMA_I2C()  # For using the built-in STEMMA QT connector on a microcontroller
         sensor = adafruit_bno055.BNO055_I2C(i2c)
 
-        # If you are going to use UART uncomment these lines
-        # uart = board.UART()
-        # sensor = adafruit_bno055.BNO055_UART(uart)
-
-        
-
-
-        # def temperature():
-        #     global last_val  # pylint: disable=global-statement
-        #     result = sensor.temperature
-        #     if abs(result - last_val) == 128:
-        #         result = sensor.temperature
-        #         if abs(result - last_val) == 128:
-        #             return 0b00111111 & result
-        #     last_val = result
-        #     return result
-
-        #endregion
         while not self.stop_measurement_thread:
             t = time.time()
             sensor_euler = sensor.euler
@@ -1484,18 +1277,16 @@ class sensor_fusion():
                                     ]
                     if self.saving_data:
                         self.save_data.save_imu(self.save_get_imu_meas)
-            # shared_data["imu_measurement"] = imu_data
+            
             
     def lidar_task(self,get_lidar_meas):
-        # print("lidar 11")
+       
         GPIO.setmode(GPIO.BCM)
         
-        # print "+-----------------------------------------------------------+"
-        # print "|   Mesure de distance par le capteur ultrasonore HC-SR04   |"
-        # print "+-----------------------------------------------------------+"
+      
 
-        Trig = 23          # Entree Trig du HC-SR04 branchee au GPIO 23
-        Echo = 24         # Sortie Echo du HC-SR04 branchee au GPIO 24
+        Trig = 23          
+        Echo = 24         
 
         GPIO.setup(Trig,GPIO.OUT)
         GPIO.setup(Echo,GPIO.IN)
@@ -1504,14 +1295,14 @@ class sensor_fusion():
         first_time = True
         time.sleep(5)
         while not self.stop_measurement_thread:
-            # print("lidar 22")
+            
             GPIO.output(Trig, True)
             time.sleep(0.00001)
             GPIO.output(Trig, False)
             p=0
             pp=0
             myStartingTime =time.time()
-            while GPIO.input(Echo)==0:  ## Emission de l'ultrason
+            while GPIO.input(Echo)==0:  
                 calculation_starting_time = time.time()
                 p=0
                 if calculation_starting_time - myStartingTime > 1:
@@ -1521,7 +1312,7 @@ class sensor_fusion():
 
             if p != 99:
 
-                while GPIO.input(Echo)==1:   ## Retour de l'Echo
+                while GPIO.input(Echo)==1:   
                     calculation_starting_time = time.time()
                     pp=0
                     if calculation_starting_time - myStartingTime > 1:
@@ -1548,7 +1339,7 @@ class sensor_fusion():
                         self.save_data.save_Lidar(self.get_lidar_meas)
             
               
-            #print ("La distance est de : ",distance," cm, mesure:",x)
+           
         
         GPIO.cleanup()
 
