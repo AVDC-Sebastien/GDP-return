@@ -8,7 +8,7 @@ import board
 import adafruit_bno055
 import numpy as np
 from ESP32_Com import ESP32
-import Sensor_fusion as Sensors
+import Work_Sensor_fusion as Sensors
 import Measurement_save as save
 
 

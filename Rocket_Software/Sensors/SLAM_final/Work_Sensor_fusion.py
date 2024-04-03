@@ -32,35 +32,37 @@ class sensor_fusion():
         # region parameters
         #----Paremeters-------
         #----IMU-------
-        Q1 = 0.5
+        Q1 = 0.2
         QV = 0.5
-        Q2= 0.5
-        Q_euler = 1
-        self.Q = np.matrix([[Q1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                                [0,Q1,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                                [0,0,Q1,0,0,0,0,0,0,0,0,0,0,0,0],
-                                [0,0,0,QV,0,0,0,0,0,0,0,0,0,0,0],
-                                [0,0,0,0,QV,0,0,0,0,0,0,0,0,0,0],
-                                [0,0,0,0,0,QV,0,0,0,0,0,0,0,0,0],
-                                [0,0,0,0,0,0,Q_euler,0,0,0,0,0,0,0,0],
-                                [0,0,0,0,0,0,0,Q_euler,0,0,0,0,0,0,0],
-                                [0,0,0,0,0,0,0,0,Q_euler,0,0,0,0,0,0],
-                                [0,0,0,0,0,0,0,0,0,Q2,0,0,0,0,0],
-                                [0,0,0,0,0,0,0,0,0,0,Q2,0,0,0,0],
-                                [0,0,0,0,0,0,0,0,0,0,0,Q2,0,0,0],
-                                [0,0,0,0,0,0,0,0,0,0,0,0,Q2,0,0],
-                                [0,0,0,0,0,0,0,0,0,0,0,0,0,Q2,0],
-                                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,Q2]]) 
+        Q2= 0.2
+        Q22 = 0.2
+        Q_euler =1
+        self.Q = np.matrix([[Q1**2,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                                [0,Q1**2,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                                [0,0,Q1**2,0,0,0,0,0,0,0,0,0,0,0,0],
+                                [0,0,0,QV**2,0,0,0,0,0,0,0,0,0,0,0],
+                                [0,0,0,0,QV**2,0,0,0,0,0,0,0,0,0,0],
+                                [0,0,0,0,0,QV**2,0,0,0,0,0,0,0,0,0],
+                                [0,0,0,0,0,0,Q_euler**2,0,0,0,0,0,0,0,0],
+                                [0,0,0,0,0,0,0,1000**2,0,0,0,0,0,0,0],
+                                [0,0,0,0,0,0,0,0,Q_euler**2,0,0,0,0,0,0],
+                                [0,0,0,0,0,0,0,0,0,Q22**2,0,0,0,0,0],
+                                [0,0,0,0,0,0,0,0,0,0,Q22**2,0,0,0,0],
+                                [0,0,0,0,0,0,0,0,0,0,0,Q22**2,0,0,0],
+                                [0,0,0,0,0,0,0,0,0,0,0,0,Q2**2,0,0],
+                                [0,0,0,0,0,0,0,0,0,0,0,0,0,Q2**2,0],
+                                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,Q2**2]]) 
 
-        self.R_imu = np.matrix([[4,0,0,0,0,0,0,0,0],
-                        [0,4,0,0,0,0,0,0,0],
-                        [0,0,4,0,0,0,0,0,0],
-                        [0,0,0,0.2,0,0,0,0,0],
-                        [0,0,0,0,0.2,0,0,0,0],
-                        [0,0,0,0,0,0.2,0,0,0],
-                        [0,0,0,0,0,0,0.2,0,0],
-                        [0,0,0,0,0,0,0,0.2,0],
-                        [0,0,0,0,0,0,0,0,0.2]])
+        euler_imu = 5
+        self.R_imu = np.matrix([[euler_imu**2,0,0,0,0,0,0,0,0],
+                        [0,euler_imu**2,0,0,0,0,0,0,0],
+                        [0,0,euler_imu**2,0,0,0,0,0,0],
+                        [0,0,0,5**2,0,0,0,0,0],
+                        [0,0,0,0,5**2,0,0,0,0],
+                        [0,0,0,0,0,5**2,0,0,0],
+                        [0,0,0,0,0,0,5**2,0,0],
+                        [0,0,0,0,0,0,0,5**2,0],
+                        [0,0,0,0,0,0,0,0,5**2]])
 
         #-----lidar-----
         # self.Q_lidar = np.matrix([[0.3,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -79,7 +81,7 @@ class sensor_fusion():
         #                         [0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
         #                         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,2]]) 
         
-        self.R_lidar = 0.1
+        self.R_lidar = 0.03**2
 
         #--camera----
         # self.Q_camera_top = np.matrix([[0.3,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -97,13 +99,14 @@ class sensor_fusion():
         #                             [0,0,0,0,0,0,0,0,0,0,0,0,2,0,0],
         #                             [0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
         #                             [0,0,0,0,0,0,0,0,0,0,0,0,0,0,2]]) 
-        
-        self.R_camera_top = np.matrix([[0.2,0,0,0,0,0],
-                                [0,0.2,0,0,0,0],
-                                [0,0,0.2,0,0,0],
-                                [0,0,0,4,0,0],
-                                [0,0,0,0,4,0],
-                                [0,0,0,0,0,4]])
+        translation_top =0.01
+        euler_top = 0.2
+        self.R_camera_top = np.matrix([[translation_top**2,0,0,0,0,0],
+                                [0,translation_top**2,0,0,0,0],
+                                [0,0,translation_top**2,0,0,0],
+                                [0,0,0,euler_top**2,0,0],
+                                [0,0,0,0,euler_top**2,0],
+                                [0,0,0,0,0,euler_top**2]])
 
         # self.Q_camera_below = np.matrix([[0.3,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         #                                 [0,0.3,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -120,15 +123,16 @@ class sensor_fusion():
         #                                 [0,0,0,0,0,0,0,0,0,0,0,0,2,0,0],
         #                                 [0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
         #                                 [0,0,0,0,0,0,0,0,0,0,0,0,0,0,2]]) 
-        
-        self.R_camera_below = np.matrix([[0.1,0,0,0,0,0],
-                                [0,0.1,0,0,0,0],
-                                [0,0,0.1,0,0,0],
-                                [0,0,0,4,0,0],
-                                [0,0,0,0,4,0],
-                                [0,0,0,0,0,4]])
+        translation_below = 0.05
+        euler_below=0.1
+        self.R_camera_below = np.matrix([[translation_below**2,0,0,0,0,0],
+                                [0,translation_below**2,0,0,0,0],
+                                [0,0,translation_below**2,0,0,0],
+                                [0,0,0,euler_below**2,0,0],
+                                [0,0,0,0,euler_below**2,0],
+                                [0,0,0,0,0,euler_below**2]])
 
-        self.initial_state_uav = np.matrix([[0,0,0.607,0,0,0,0,0,0,0,0,0,0,0,0]])
+        self.initial_state_uav = np.matrix([[0,0,0.607,0,0,0,0.1,0.1,0.1,0,0,0,0,0,0]])
         pv=3
         self.P_uav = np.matrix([[pv,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                         [0,pv,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -238,7 +242,7 @@ class sensor_fusion():
         self.offset_lidar = [0.07,0.03,0]
 
         self.target_angle_offset = target_angle_offset
-        self.target_angle_offset = (0,-1,0)
+        self.target_angle_offset = (0,0,0)
 
         self.calibration_faite = 0
 
@@ -254,7 +258,99 @@ class sensor_fusion():
 
         self.lock = threading.Lock()
 
- 
+    def state_functionV2(self, state_uav, dt):
+       
+        from scipy.spatial.transform import Rotation as R  
+        from torch.autograd.functional import jacobian
+        import torch
+        def cam(state_uav, dt):
+            
+            state_uav_np = state_uav.detach().numpy()
+            dt_np = dt.detach().numpy()
+            dt = dt_np
+
+            # Your implementation of the cam function using numpy arrays
+            position = np.transpose(np.matrix(state_uav_np[0:3]))
+            velocity = np.transpose(np.matrix(state_uav_np[3:6]))
+            euler = np.transpose(np.radians(np.matrix(state_uav_np[6:9])))
+            euler_deg = np.transpose(np.matrix(state_uav_np[6:9]))
+            angular_rate = np.transpose(np.matrix(state_uav_np[9:12]))
+            linear_acceleration = np.matrix(state_uav_np[12:15])
+            
+
+            pos_x = position[0,0]
+            pos_y = position[0,1]
+            pos_z = position[0,2]
+            vel_x = velocity[0,0]
+            vel_y = velocity[0,1]
+            vel_z = velocity[0,2]
+            acc_x = linear_acceleration[0,0]
+            acc_y = linear_acceleration[1,0]
+            acc_z = linear_acceleration[2,0]
+            omega_1 = angular_rate[0,0]
+            omega_2 = angular_rate[0,1]
+            omega_3 = angular_rate[0,2] 
+            theta_1 = euler[0,0] 
+            theta_2 = euler[0,1] 
+            theta_3 = euler[0,2] 
+
+            state_estimated = np.matrix([
+                [pos_x + dt*vel_x],
+                [ pos_y + dt*vel_y],
+                [ pos_z + dt*vel_z],
+                [ vel_x + dt*(acc_x*np.cos(theta_1)*np.cos(theta_2) - acc_z*np.sin(theta_2) + acc_y*np.cos(theta_2)*np.sin(theta_1))],
+                [ vel_y + dt*(acc_y*(np.cos(theta_1)*np.cos(theta_3) + np.sin(theta_1)*np.sin(theta_2)*np.sin(theta_3)) - acc_x*(np.cos(theta_3)*np.sin(theta_1) - np.cos(theta_1)*np.sin(theta_2)*np.sin(theta_3)) + acc_z*np.cos(theta_2)*np.sin(theta_3))],
+                [ vel_z + dt*(acc_x*(np.sin(theta_1)*np.sin(theta_3) + np.cos(theta_1)*np.cos(theta_2)*np.cos(theta_3)) - acc_y*(np.cos(theta_1)*np.sin(theta_3) - np.cos(theta_2)*np.cos(theta_3)*np.sin(theta_1)) + acc_z*np.cos(theta_2)*np.cos(theta_3))],
+                [ np.degrees(theta_1 + dt*((omega_3*np.cos(theta_3))/np.cos(theta_2) + (omega_2*np.sin(theta_3))/np.cos(theta_2)))],
+                [ np.degrees(theta_2 + dt*(omega_2*np.cos(theta_3) - omega_3*np.sin(theta_3)))],
+                [ np.degrees(theta_3 + dt*(omega_1 + (omega_3*np.cos(theta_3)*np.sin(theta_2))/np.cos(theta_2) + (omega_2*np.sin(theta_2)*np.sin(theta_3))/np.cos(theta_2)))],
+                [ omega_1],
+                [ omega_2],
+                [ omega_3],
+                [ acc_x],
+                [ acc_y],
+                [ acc_z]
+            ])
+            state_estimated_tensor = torch.tensor(state_estimated, dtype=torch.float32)
+
+            return state_estimated_tensor
+        
+       
+        state_uav_tensor = torch.tensor(state_uav, dtype=torch.float32)
+        dt_tensor = torch.tensor(dt, dtype=torch.float32)
+        A=cam(state_uav_tensor, dt_tensor)
+        # Call the function with PyTorch tensors
+
+
+        # Create a tuple of PyTorch tensors
+        inputs = (state_uav_tensor, dt_tensor)
+
+        # Compute the Jacobian
+        J = jacobian(cam, inputs)
+
+        
+        
+        F_markers = np.matrix([[1,0,0],
+                                [0,1,0],
+                                [0,0,1]])
+        
+        J_np = list(J[0])
+        
+        JJ = np.matrix(np.zeros((15, 15)))
+        print(JJ[1,2])
+        print(J_np[1][0][2])
+        for i in range(15):
+            for j in range(15):
+                JJ[i,j]= J_np[i][0][j]
+
+
+
+
+
+        
+
+        return A.numpy(), JJ, F_markers
+
     def state_function(self,state_uav, dt):
         
         #matrice rotation bodyframe->absolute
@@ -317,7 +413,7 @@ class sensor_fusion():
             [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
         ])
         print("state estimé par matlab:", state_estimated)
-        print("F de matlab",F_matlab)
+        # print("F de matlab",F_matlab)
         F_markers = np.matrix([[1,0,0],
                               [0,1,0],
                               [0,0,1]])
@@ -330,11 +426,11 @@ class sensor_fusion():
 
         # Pp= F @ P @ (F.transpose()) + Q
         S = H @ P @ (H.transpose()) + R
-        K = (P @ H.transpose())*inv(S)
+        K = (P @ H.transpose()) @ inv(S)
         
 
         #update
-        update_state = predicted_state_uav + K*residual
+        update_state = predicted_state_uav + K@residual
         P = P - K @ S @ K.transpose()
         print("covariance", P)
         return update_state, P
@@ -665,7 +761,7 @@ class sensor_fusion():
                     lidar_measurement=0
             # camera_top_dict = 0
             # camera_below_dict = 0
-            # imu_measurement = 0
+            imu_measurement = 0
             lidar_measurement = 0
             # print("cam meas",camera_top_dict)
             # print("cam b meas", camera_below_dict)
@@ -828,7 +924,8 @@ class sensor_fusion():
         
             self.true_uav_position = self.uav_state
             print("result",self.true_uav_position)
-            if abs(self.uav_state[0,0])>0.1 or self.uav_state[1,0]>0.1 or self.uav_state[2,0]>1 or np.absolute(self.uav_state[3,0])>1 or np.absolute(self.uav_state[4,0])>1 or np.absolute(self.uav_state[5,0])>1 or np.absolute(self.uav_state[6,0])>20 or np.absolute(self.uav_state[7,0])>20 or np.absolute(self.uav_state[8,0])>20:
+            #if abs(self.uav_state[0,0])>0.1 or self.uav_state[1,0]>0.1 or self.uav_state[2,0]>1 or np.absolute(self.uav_state[3,0])>1 or np.absolute(self.uav_state[4,0])>1 or np.absolute(self.uav_state[5,0])>1 or np.absolute(self.uav_state[6,0])>20 or np.absolute(self.uav_state[7,0])>20 or np.absolute(self.uav_state[8,0])>20:
+            if abs(self.uav_state[0,0])>0.1 or self.uav_state[1,0]>0.1 or self.uav_state[2,0]>1 or np.absolute(self.uav_state[6,0])>20 or np.absolute(self.uav_state[7,0])>20 or np.absolute(self.uav_state[8,0])>20:
                 print("probem")
                 time.sleep(30)
             
